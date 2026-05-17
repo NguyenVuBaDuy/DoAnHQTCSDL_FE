@@ -38,3 +38,30 @@ export interface LoginError {
   success: false;
   timestamp: string;
 }
+
+// ==================== GetMe ====================
+
+export interface NhanVien {
+  hoten: string;
+  chucvu: string;
+  mach: number;
+  sdt: string;
+  diachi: string;
+  ngaysinh: string;
+  gioitinh: string;
+}
+
+export interface GetMeData {
+  matk: number;
+  manv: string;
+  manhom: number;
+  tennhom: string;
+  nhanvien: NhanVien;
+}
+
+export interface GetMeResponse {
+  data: GetMeData;
+  message: string;
+  success: boolean;
+  timestamp: string;
+}

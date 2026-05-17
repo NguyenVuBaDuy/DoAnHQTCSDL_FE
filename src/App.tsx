@@ -39,15 +39,15 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/nhan-vien" element={<NhanVienListPage />} />
-            <Route path="/cua-hang" element={<CuaHangPage />} />
-            <Route path="/san-pham" element={<SanPhamPage />} />
-            <Route path="/ton-kho" element={<TonKhoPage />} />
-            <Route path="/hoa-don" element={<HoaDonPage />} />
-            <Route path="/khach-hang" element={<KhachHangPage />} />
-            <Route path="/voucher" element={<VoucherPage />} />
-            <Route path="/bao-cao" element={<BaoCaoPage />} />
-            <Route path="/cai-dat" element={<CaiDatPage />} />
+            <Route path="/employees" element={<NhanVienListPage />} />
+            <Route path="/stores" element={<CuaHangPage />} />
+            <Route path="/products" element={<SanPhamPage />} />
+            <Route path="/inventory" element={<TonKhoPage />} />
+            <Route path="/invoices" element={<HoaDonPage />} />
+            <Route path="/customers" element={<KhachHangPage />} />
+            <Route path="/vouchers" element={<VoucherPage />} />
+            <Route path="/reports" element={<BaoCaoPage />} />
+            <Route path="/settings" element={<CaiDatPage />} />
           </Route>
         </Route>
 

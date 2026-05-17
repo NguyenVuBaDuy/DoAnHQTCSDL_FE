@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   HiOutlineHome,
   HiOutlineBuildingStorefront,
@@ -11,27 +11,27 @@ import {
   HiOutlineChartBar,
   HiOutlineCog6Tooth,
   HiOutlineArrowRightOnRectangle,
-} from 'react-icons/hi2'
+} from "react-icons/hi2";
 
 const mainNavItems = [
-  { to: '/dashboard', label: 'Tổng quan', icon: HiOutlineHome },
-  { to: '/cua-hang', label: 'Cửa hàng', icon: HiOutlineBuildingStorefront },
-  { to: '/nhan-vien', label: 'Nhân viên', icon: HiOutlineUsers },
-  { to: '/san-pham', label: 'Sản phẩm', icon: HiOutlineCube },
-  { to: '/ton-kho', label: 'Tồn kho', icon: HiOutlineArchiveBox },
-  { to: '/hoa-don', label: 'Hóa đơn', icon: HiOutlineDocumentText },
-  { to: '/khach-hang', label: 'Khách hàng', icon: HiOutlineUserGroup },
-  { to: '/voucher', label: 'Voucher', icon: HiOutlineTicket },
-  { to: '/bao-cao', label: 'Báo cáo', icon: HiOutlineChartBar },
-]
+  { to: "/dashboard", label: "Tổng quan", icon: HiOutlineHome },
+  { to: "/stores", label: "Cửa hàng", icon: HiOutlineBuildingStorefront },
+  { to: "/employees", label: "Nhân viên", icon: HiOutlineUsers },
+  { to: "/products", label: "Sản phẩm", icon: HiOutlineCube },
+  { to: "/inventory", label: "Tồn kho", icon: HiOutlineArchiveBox },
+  { to: "/invoices", label: "Hóa đơn", icon: HiOutlineDocumentText },
+  { to: "/customers", label: "Khách hàng", icon: HiOutlineUserGroup },
+  { to: "/vouchers", label: "Voucher", icon: HiOutlineTicket },
+  { to: "/reports", label: "Báo cáo", icon: HiOutlineChartBar },
+];
 
 const Sidebar = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    navigate('/login')
-  }
+    localStorage.removeItem("accessToken");
+    navigate("/login");
+  };
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-white border-r border-[#C1C6D5] flex flex-col justify-between py-6 z-50">
@@ -56,12 +56,12 @@ const Sidebar = () => {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm leading-5 transition-all duration-200 ${
                 isActive
-                  ? 'bg-[#D0E1FB] text-[#54647A] border-l-4 border-[#0057AD] font-medium'
-                  : 'text-[#414753] hover:bg-gray-100'
+                  ? "bg-[#D0E1FB] text-[#54647A] border-l-4 border-[#0057AD] font-medium"
+                  : "text-[#414753] hover:bg-gray-100"
               }`
             }
           >
-            <item.icon className="w-5 h-5 flex-shrink-0" />
+            <item.icon className="w-5 h-5 shrink-0" />
             <span>{item.label}</span>
           </NavLink>
         ))}
@@ -70,28 +70,28 @@ const Sidebar = () => {
       {/* Footer Nav */}
       <div className="border-t border-[#C1C6D5] pt-4 px-4 space-y-1">
         <NavLink
-          to="/cai-dat"
+          to="/settings"
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm leading-5 transition-all duration-200 ${
               isActive
-                ? 'bg-[#D0E1FB] text-[#54647A] border-l-4 border-[#0057AD] font-medium'
-                : 'text-[#414753] hover:bg-gray-100'
+                ? "bg-[#D0E1FB] text-[#54647A] border-l-4 border-[#0057AD] font-medium"
+                : "text-[#414753] hover:bg-gray-100"
             }`
           }
         >
-          <HiOutlineCog6Tooth className="w-5 h-5 flex-shrink-0" />
+          <HiOutlineCog6Tooth className="w-5 h-5 shrink-0" />
           <span>Cài đặt</span>
         </NavLink>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm leading-5 text-[#414753] hover:bg-gray-100 w-full transition-all duration-200"
         >
-          <HiOutlineArrowRightOnRectangle className="w-5 h-5 flex-shrink-0" />
+          <HiOutlineArrowRightOnRectangle className="w-5 h-5 shrink-0" />
           <span>Đăng xuất</span>
         </button>
       </div>
     </aside>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

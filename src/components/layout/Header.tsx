@@ -94,7 +94,7 @@ const Header = () => {
                   className="w-full text-left px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
                   onClick={() => {
                     setIsDropdownOpen(false);
-                    navigate("/cai-dat");
+                    navigate("/settings");
                   }}
                 >
                   <HiOutlineCog6Tooth className="w-[18px] h-[18px] text-gray-500" />

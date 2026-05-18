@@ -3,7 +3,7 @@ import { HiOutlineBell, HiOutlineUser, HiOutlineCog6Tooth, HiOutlineArrowRightOn
 import { useAppSelector, useAppDispatch } from "../../store";
 import { logout } from "../../store/authSlice";
 import { useNavigate } from "react-router-dom";
-
+import { getRoleName } from "../../utils/roleUtils";
 const Header = () => {
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
@@ -30,16 +30,6 @@ const Header = () => {
   const getInitial = (name?: string) => {
     if (!name) return "U";
     return name.charAt(0).toUpperCase();
-  };
-
-  const getRoleName = (roleCode?: string, fallback: string = 'Hệ thống quản lý') => {
-    switch (roleCode) {
-      case 'Admin': return 'Admin';
-      case 'QuanLyCuaHang': return 'Quản lý cửa hàng';
-      case 'NhanVienBan': return 'Bộ phận bán hàng';
-      case 'Kho': return 'Bộ phận kho';
-      default: return roleCode || fallback;
-    }
   };
 
   return (

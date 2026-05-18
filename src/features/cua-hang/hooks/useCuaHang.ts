@@ -9,6 +9,14 @@ export const useGetCuaHangs = () => {
   });
 };
 
+export const useGetCuaHangById = (id: number | undefined) => {
+  return useQuery({
+    queryKey: ['cuaHang', id],
+    queryFn: () => cuaHangService.getCuaHangById(id!),
+    enabled: !!id,
+  });
+};
+
 export const useCreateCuaHang = () => {
   const queryClient = useQueryClient();
   
@@ -16,6 +24,19 @@ export const useCreateCuaHang = () => {
     mutationFn: (data: CreateCuaHangRequest) => cuaHangService.createCuaHang(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cuaHangs'] });
+    },
+  });
+};
+
+export const useUpdateCuaHang = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: CreateCuaHangRequest }) => 
+      cuaHangService.updateCuaHang(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cuaHangs'] });
+      queryClient.invalidateQueries({ queryKey: ['cuaHang', variables.id] });
     },
   });
 };

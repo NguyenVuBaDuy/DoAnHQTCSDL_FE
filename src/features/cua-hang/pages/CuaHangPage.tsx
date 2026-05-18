@@ -14,11 +14,17 @@ import { useGetCuaHangs } from "../hooks/useCuaHang";
 
 import { format } from "date-fns";
 import { CuaHangModal } from "../components/CuaHangModal";
+import SuccessModal from "../../../components/common/SuccessModal";
+import CuaHangDetailDrawer from "../components/CuaHangDetailDrawer";
+import type { CuaHang } from "../../../types/cua-hang";
 
 const CuaHangPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedCuaHang, setSelectedCuaHang] = useState<CuaHang | null>(null);
 
   const { data: cuaHangsResponse, isLoading, isError } = useGetCuaHangs();
   const cuaHangs = useMemo(
@@ -260,7 +266,13 @@ const CuaHangPage = () => {
                 </div>
               </div>
 
-              <div className="bg-blue-50 border-t border-gray-100 p-3 flex justify-center items-center gap-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 transition-colors cursor-pointer text-sm font-medium">
+              <div 
+                className="bg-blue-50 border-t border-gray-100 p-3 flex justify-center items-center gap-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 transition-colors cursor-pointer text-sm font-medium"
+                onClick={() => {
+                  setSelectedCuaHang(ch);
+                  setIsDrawerOpen(true);
+                }}
+              >
                 Xem chi tiết
                 <FiArrowRight />
               </div>
@@ -272,6 +284,20 @@ const CuaHangPage = () => {
       <CuaHangModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
+        onSuccessAction={() => setIsSuccessModalOpen(true)}
+      />
+
+      <SuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title="Thêm thành công"
+        message="Cửa hàng mới đã được thêm vào hệ thống."
+      />
+
+      <CuaHangDetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        cuaHang={selectedCuaHang}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { useCreateCuaHang } from "../hooks/useCuaHang";
 import type { CreateCuaHangRequest } from "../../../types/cua-hang";
@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 interface CuaHangModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccessAction?: () => void;
 }
 
 const initialFormData: CreateCuaHangRequest = {
@@ -18,12 +19,24 @@ const initialFormData: CreateCuaHangRequest = {
   trangThai: "HoatDong",
 };
 
-export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
+export const CuaHangModal = ({
+  isOpen,
+  onClose,
+  onSuccessAction,
+}: CuaHangModalProps) => {
   const [formData, setFormData] =
     useState<CreateCuaHangRequest>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const createMutation = useCreateCuaHang();
+
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormData(initialFormData);
+      setErrors({});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -31,7 +44,14 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
     const newErrors: Record<string, string> = {};
     if (!formData.tenCh.trim()) newErrors.tenCh = "Tên cửa hàng là bắt buộc";
     if (!formData.diaChi.trim()) newErrors.diaChi = "Địa chỉ là bắt buộc";
-    if (!formData.sdt.trim()) newErrors.sdt = "Số điện thoại là bắt buộc";
+
+    if (!formData.sdt.trim()) {
+      newErrors.sdt = "Số điện thoại là bắt buộc";
+    } else if (!/^0\d{9}$/.test(formData.sdt)) {
+      newErrors.sdt =
+        "Số điện thoại không hợp lệ (bắt đầu bằng 0 và có 10 chữ số)";
+    }
+
     if (!formData.email.trim()) {
       newErrors.email = "Email là bắt buộc";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -46,13 +66,17 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      toast.error("Vui lòng kiểm tra lại thông tin");
+      return;
+    }
 
     createMutation.mutate(formData, {
       onSuccess: () => {
         toast.success("Thêm cửa hàng thành công!");
         setFormData(initialFormData);
         onClose();
+        if (onSuccessAction) onSuccessAction();
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onError: (error: any) => {
@@ -64,7 +88,9 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -74,24 +100,27 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Thêm Cửa Hàng Mới
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+          <h2 className="text-xl font-bold text-gray-800">Thêm Cửa Hàng Mới</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors"
+            className="p-2 text-gray-500 hover:bg-gray-200 rounded-full transition-colors"
           >
-            <FiX className="w-5 h-5" />
+            <FiX size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="p-6 overflow-y-auto flex-1">
+          <form
+            id="add-cuahang-form"
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-2 gap-5"
+          >
+            {/* Tên cửa hàng */}
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700">
                 Tên cửa hàng <span className="text-red-500">*</span>
               </label>
               <input
@@ -99,41 +128,21 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
                 name="tenCh"
                 value={formData.tenCh}
                 onChange={handleChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm ${
                   errors.tenCh
                     ? "border-red-500 focus:border-red-500"
-                    : "border-gray-300"
+                    : "border-gray-300 focus:border-blue-500"
                 }`}
-                placeholder="Nhập tên cửa hàng"
+                placeholder="Nhập tên cửa hàng..."
               />
               {errors.tenCh && (
-                <p className="mt-1 text-sm text-red-500">{errors.tenCh}</p>
+                <p className="text-xs text-red-500">{errors.tenCh}</p>
               )}
             </div>
 
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Địa chỉ <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="diaChi"
-                value={formData.diaChi}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-                  errors.diaChi
-                    ? "border-red-500 focus:border-red-500"
-                    : "border-gray-300"
-                }`}
-                placeholder="Nhập địa chỉ"
-              />
-              {errors.diaChi && (
-                <p className="mt-1 text-sm text-red-500">{errors.diaChi}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Số điện thoại */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">
                 Số điện thoại <span className="text-red-500">*</span>
               </label>
               <input
@@ -141,20 +150,21 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
                 name="sdt"
                 value={formData.sdt}
                 onChange={handleChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm ${
                   errors.sdt
                     ? "border-red-500 focus:border-red-500"
-                    : "border-gray-300"
+                    : "border-gray-300 focus:border-blue-500"
                 }`}
-                placeholder="Nhập số điện thoại"
+                placeholder="Nhập số điện thoại..."
               />
               {errors.sdt && (
-                <p className="mt-1 text-sm text-red-500">{errors.sdt}</p>
+                <p className="text-xs text-red-500">{errors.sdt}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Email */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">
                 Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -162,20 +172,21 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm ${
                   errors.email
                     ? "border-red-500 focus:border-red-500"
-                    : "border-gray-300"
+                    : "border-gray-300 focus:border-blue-500"
                 }`}
-                placeholder="Nhập email"
+                placeholder="Nhập địa chỉ email..."
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                <p className="text-xs text-red-500">{errors.email}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Ngày khai trương */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">
                 Ngày khai trương <span className="text-red-500">*</span>
               </label>
               <input
@@ -183,57 +194,75 @@ export const CuaHangModal = ({ isOpen, onClose }: CuaHangModalProps) => {
                 name="ngayKhaiTruong"
                 value={formData.ngayKhaiTruong}
                 onChange={handleChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm ${
                   errors.ngayKhaiTruong
                     ? "border-red-500 focus:border-red-500"
-                    : "border-gray-300"
+                    : "border-gray-300 focus:border-blue-500"
                 }`}
               />
               {errors.ngayKhaiTruong && (
-                <p className="mt-1 text-sm text-red-500">
-                  {errors.ngayKhaiTruong}
-                </p>
+                <p className="text-xs text-red-500">{errors.ngayKhaiTruong}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Trạng thái */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">
                 Trạng thái <span className="text-red-500">*</span>
               </label>
               <select
                 name="trangThai"
                 value={formData.trangThai}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
               >
                 <option value="HoatDong">Đang hoạt động</option>
                 <option value="TamNgung">Tạm ngưng</option>
                 <option value="DongCua">Đóng cửa</option>
               </select>
             </div>
-          </div>
 
-          <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
-            >
-              {createMutation.isPending ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                "Thêm mới"
+            {/* Địa chỉ */}
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700">
+                Địa chỉ <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                name="diaChi"
+                rows={3}
+                value={formData.diaChi}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm resize-none ${
+                  errors.diaChi
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:border-blue-500"
+                }`}
+                placeholder="Nhập địa chỉ cửa hàng..."
+              />
+              {errors.diaChi && (
+                <p className="text-xs text-red-500">{errors.diaChi}</p>
               )}
-            </button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Hủy bỏ
+          </button>
+          <button
+            type="submit"
+            form="add-cuahang-form"
+            disabled={createMutation.isPending}
+            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {createMutation.isPending ? "Đang xử lý..." : "Xác nhận thêm"}
+          </button>
+        </div>
       </div>
     </div>
   );

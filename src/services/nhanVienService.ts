@@ -21,4 +21,18 @@ export const nhanVienService = {
     const { data } = await apiClient.post<ApiResponse<null>>("/nhan-vien", payload);
     return data;
   },
+  updateNhanVien: async (
+    maNv: string,
+    payload: import("../types/nhan-vien").UpdateNhanVienRequest,
+  ): Promise<ApiResponse<null>> => {
+    const { data } = await apiClient.put<ApiResponse<null>>(`/nhan-vien/${maNv}`, payload);
+    return data;
+  },
+  updateTrangThaiNhanVien: async (
+    maNv: string,
+    payload: import("../types/nhan-vien").UpdateTrangThaiRequest,
+  ): Promise<ApiResponse<null>> => {
+    const { data } = await apiClient.put<ApiResponse<null>>(`/nhan-vien/${maNv}/tai-khoan/trang-thai`, payload);
+    return data;
+  },
 };

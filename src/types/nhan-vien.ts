@@ -39,3 +39,9 @@ export interface CreateNhanVienRequest {
   password?: string;
   trangThai: string;
 }
+
+export type UpdateNhanVienRequest = CreateNhanVienRequest;
+
+export interface UpdateTrangThaiRequest {
+  trangThai: string;
+}

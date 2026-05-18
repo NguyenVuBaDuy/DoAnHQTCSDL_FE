@@ -19,3 +19,25 @@ export const useCreateNhanVien = () => {
     },
   });
 };
+
+export const useUpdateNhanVien = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ maNv, data }: { maNv: string; data: import('../../../types/nhan-vien').UpdateNhanVienRequest }) => 
+      nhanVienService.updateNhanVien(maNv, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nhanViens'] });
+    },
+  });
+};
+
+export const useUpdateTrangThaiNhanVien = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ maNv, data }: { maNv: string; data: import('../../../types/nhan-vien').UpdateTrangThaiRequest }) => 
+      nhanVienService.updateTrangThaiNhanVien(maNv, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nhanViens'] });
+    },
+  });
+};

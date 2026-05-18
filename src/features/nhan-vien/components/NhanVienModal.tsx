@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import { useCreateNhanVien } from "../hooks/useNhanVien";
+import { useCreateNhanVien, useUpdateNhanVien } from "../hooks/useNhanVien";
 import { roles } from "../../../utils/roleUtils";
 import { useAppSelector } from "../../../store";
 import type { CuaHang } from "../../../types/cua-hang";
@@ -11,6 +11,7 @@ interface NhanVienModalProps {
   isOpen: boolean;
   onClose: () => void;
   cuaHangs: CuaHang[];
+  initialData?: import("../../../types/nhan-vien").NhanVienListItem | null;
   onSuccessAction?: () => void;
 }
 
@@ -18,6 +19,7 @@ const NhanVienModal = ({
   isOpen,
   onClose,
   cuaHangs,
+  initialData,
   onSuccessAction,
 }: NhanVienModalProps) => {
   const { user } = useAppSelector((state) => state.auth);
@@ -25,6 +27,8 @@ const NhanVienModal = ({
   const userMaCh = user?.nhanvien?.mach;
 
   const createMutation = useCreateNhanVien();
+  const updateMutation = useUpdateNhanVien();
+  const isEditMode = !!initialData;
 
   const [formData, setFormData] = useState<CreateNhanVienRequest>({
     hoTen: "",
@@ -43,27 +47,43 @@ const NhanVienModal = ({
   // Reset form and set default maCh when modal opens
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFormData({
-        hoTen: "",
-        cccd: "",
-        ngaySinh: "",
-        gioiTinh: "Nam",
-        sdt: "",
-        diaChi: "",
-        chucVu: "NhanVienBan",
-        maCh:
-          role !== "Admin" && userMaCh
-            ? userMaCh
-            : cuaHangs.length > 0
-              ? cuaHangs[0].maCh
-              : 0,
-        tenNhom: "NhanVienBan",
-        password: "",
-        trangThai: "HoatDong",
-      });
+      if (initialData) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFormData({
+          hoTen: initialData.hoTen,
+          cccd: initialData.cccd,
+          ngaySinh: initialData.ngaySinh,
+          gioiTinh: initialData.gioiTinh,
+          sdt: initialData.sdt,
+          diaChi: initialData.diaChi,
+          chucVu: initialData.chucVu,
+          maCh: initialData.maCh,
+          tenNhom: initialData.tenNhom,
+          password: "", // Keep empty for password update, assuming backend handles empty as no change or user has to provide it
+          trangThai: initialData.trangThai,
+        });
+      } else {
+        setFormData({
+          hoTen: "",
+          cccd: "",
+          ngaySinh: "",
+          gioiTinh: "Nam",
+          sdt: "",
+          diaChi: "",
+          chucVu: "NhanVienBan",
+          maCh:
+            role !== "Admin" && userMaCh
+              ? userMaCh
+              : cuaHangs.length > 0
+                ? cuaHangs[0].maCh
+                : 0,
+          tenNhom: "NhanVienBan",
+          password: "",
+          trangThai: "HoatDong",
+        });
+      }
     }
-  }, [isOpen, role, userMaCh, cuaHangs]);
+  }, [isOpen, role, userMaCh, cuaHangs, initialData]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -109,20 +129,33 @@ const NhanVienModal = ({
       return;
     }
 
-    createMutation.mutate(formData, {
-      onSuccess: () => {
+    const mutationFn = isEditMode
+      ? () =>
+          updateMutation.mutateAsync({
+            maNv: initialData.maNv,
+            data: formData,
+          })
+      : () => createMutation.mutateAsync(formData);
+
+    mutationFn()
+      .then(() => {
         onClose();
-        toast.success("Thêm nhân viên thành công!");
+        toast.success(
+          isEditMode
+            ? "Cập nhật nhân viên thành công!"
+            : "Thêm nhân viên thành công!",
+        );
         if (onSuccessAction) onSuccessAction();
-      },
+      })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onError: (error: any) => {
-        console.error("Lỗi khi thêm nhân viên:", error);
+      .catch((error: any) => {
+        console.error("Lỗi khi lưu nhân viên:", error);
         const errorMessage =
-          error?.message || "Đã xảy ra lỗi khi thêm nhân viên.";
+          error?.response?.data?.message ||
+          error?.message ||
+          "Đã xảy ra lỗi khi lưu nhân viên.";
         toast.error(errorMessage);
-      },
-    });
+      });
   };
 
   if (!isOpen) return null;
@@ -132,7 +165,7 @@ const NhanVienModal = ({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">
-            Thêm nhân viên mới
+            {isEditMode ? "Cập nhật nhân viên" : "Thêm nhân viên mới"}
           </h2>
           <button
             onClick={onClose}
@@ -230,20 +263,22 @@ const NhanVienModal = ({
             </div>
 
             {/* Mật khẩu */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">
-                Mật khẩu <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                name="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Nhập mật khẩu..."
-              />
-            </div>
+            {!isEditMode && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Mật khẩu <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Nhập mật khẩu..."
+                />
+              </div>
+            )}
 
             {/* Trạng thái */}
             <div className="flex flex-col gap-1.5">
@@ -344,10 +379,14 @@ const NhanVienModal = ({
           <button
             type="submit"
             form="add-nhanvien-form"
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || updateMutation.isPending}
             className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {createMutation.isPending ? "Đang xử lý..." : "Xác nhận thêm"}
+            {createMutation.isPending || updateMutation.isPending
+              ? "Đang xử lý..."
+              : isEditMode
+                ? "Cập nhật"
+                : "Xác nhận thêm"}
           </button>
         </div>
       </div>

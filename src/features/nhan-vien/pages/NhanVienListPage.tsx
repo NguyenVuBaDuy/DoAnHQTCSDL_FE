@@ -6,7 +6,8 @@ import {
   FiChevronDown,
   FiMoreHorizontal,
 } from "react-icons/fi";
-import { useGetNhanViens } from "../hooks/useNhanVien";
+import { toast } from "react-hot-toast";
+import { useGetNhanViens, useUpdateTrangThaiNhanVien } from "../hooks/useNhanVien";
 import { useGetCuaHangs } from "../../cua-hang/hooks/useCuaHang";
 import type { GetNhanVienParams } from "../../../types/nhan-vien";
 import { getRoleName, roles } from "../../../utils/roleUtils";
@@ -28,8 +29,31 @@ const NhanVienListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingNhanVien, setEditingNhanVien] = useState<import('../../../types/nhan-vien').NhanVienListItem | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+
+  const handleAddClick = () => {
+    setEditingNhanVien(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditClick = (nhanVien: import('../../../types/nhan-vien').NhanVienListItem) => {
+    setEditingNhanVien(nhanVien);
+    setIsModalOpen(true);
+  };
+
+  const updateStatusMutation = useUpdateTrangThaiNhanVien();
+
+  const handleStatusChange = (maNv: string, newStatus: string) => {
+    updateStatusMutation.mutate({ maNv, data: { trangThai: newStatus } }, {
+      onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
+      onError: (error: any) => {
+        console.error("Lỗi cập nhật trạng thái:", error);
+        toast.error(error?.response?.data?.message || "Cập nhật trạng thái thất bại!");
+      }
+    });
+  };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -67,7 +91,7 @@ const NhanVienListPage = () => {
             Xuất Excel
           </button>
           <button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={handleAddClick}
             className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
           >
             <FiPlus />
@@ -245,20 +269,36 @@ const NhanVienListPage = () => {
                     </td>
                     <td className="px-6 py-4 text-gray-900">{row.sdt}</td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          row.trangThai === "HoatDong"
-                            ? "bg-green-100 text-green-800"
-                            : row.trangThai === "KhoaTam"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {getAccountStatusName(row.trangThai)}
-                      </span>
+                      <div className="relative inline-block">
+                        <select
+                          value={row.trangThai}
+                          onChange={(e) => handleStatusChange(row.maNv, e.target.value)}
+                          disabled={updateStatusMutation.isPending && updateStatusMutation.variables?.maNv === row.maNv}
+                          className={`appearance-none cursor-pointer outline-none inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border-none pr-5 focus:ring-2 focus:ring-blue-500 transition-colors ${
+                            row.trangThai === "HoatDong"
+                              ? "bg-green-100 text-green-800"
+                              : row.trangThai === "KhoaTam"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          } disabled:opacity-50`}
+                        >
+                          {accountStatuses.map((status) => (
+                            <option key={status.value} value={status.value} className="bg-white text-gray-900">
+                              {status.label}
+                            </option>
+                          ))}
+                        </select>
+                        <FiChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none w-3 h-3 opacity-50" />
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center">
+                        <button 
+                          onClick={() => handleEditClick(row)}
+                          className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-md hover:bg-blue-50 mr-2 text-sm font-medium"
+                        >
+                          Sửa
+                        </button>
                         <button className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100">
                           <FiMoreHorizontal size={18} />
                         </button>
@@ -318,17 +358,18 @@ const NhanVienListPage = () => {
       </div>
 
       <NhanVienModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         cuaHangs={cuaHangs}
+        initialData={editingNhanVien}
         onSuccessAction={() => setIsSuccessModalOpen(true)}
       />
 
       <SuccessModal
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
-        title="Thêm thành công"
-        message="Nhân viên mới đã được thêm vào hệ thống."
+        title={editingNhanVien ? "Cập nhật thành công" : "Thêm thành công"}
+        message={editingNhanVien ? "Thông tin nhân viên đã được cập nhật." : "Nhân viên mới đã được thêm vào hệ thống."}
       />
     </div>
   );

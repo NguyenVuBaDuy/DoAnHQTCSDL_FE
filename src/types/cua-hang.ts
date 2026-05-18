@@ -7,3 +7,5 @@ export interface CuaHang {
   ngayKhaiTruong: string;
   trangThai: string;
 }
+
+export type CreateCuaHangRequest = Omit<CuaHang, 'maCh'>;

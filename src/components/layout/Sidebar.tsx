@@ -12,6 +12,7 @@ import {
   HiOutlineCog6Tooth,
   HiOutlineArrowRightOnRectangle,
 } from "react-icons/hi2";
+import { useAppSelector } from "../../store";
 
 const mainNavItems = [
   { to: "/dashboard", label: "Tổng quan", icon: HiOutlineHome },
@@ -27,6 +28,8 @@ const mainNavItems = [
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const { user } = useAppSelector((state) => state.auth);
+  const role = user?.tennhom;
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -49,22 +52,29 @@ const Sidebar = () => {
 
       {/* Main Nav */}
       <nav className="flex-1 overflow-y-auto px-4 space-y-1">
-        {mainNavItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm leading-5 transition-all duration-200 ${
-                isActive
-                  ? "bg-[#D0E1FB] text-[#54647A] border-l-4 border-[#0057AD] font-medium"
-                  : "text-[#414753] hover:bg-gray-100"
-              }`
+        {mainNavItems
+          .filter((item) => {
+            if (item.to === "/employees") {
+              return role !== "NhanVienBan" && role !== "NhanVienKho";
             }
-          >
-            <item.icon className="w-5 h-5 shrink-0" />
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+            return true;
+          })
+          .map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm leading-5 transition-all duration-200 ${
+                  isActive
+                    ? "bg-[#D0E1FB] text-[#54647A] border-l-4 border-[#0057AD] font-medium"
+                    : "text-[#414753] hover:bg-gray-100"
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5 shrink-0" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
       </nav>
 
       {/* Footer Nav */}

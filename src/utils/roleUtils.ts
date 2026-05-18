@@ -15,3 +15,10 @@ export const getRoleName = (
       return roleCode || fallback;
   }
 };
+
+export const roles = [
+  { value: "Admin", label: "Admin" },
+  { value: "QuanLyCuaHang", label: "Quản lý cửa hàng" },
+  { value: "NhanVienBan", label: "Bộ phận bán hàng" },
+  { value: "NhanVienKho", label: "Bộ phận kho" },
+];

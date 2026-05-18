@@ -7,11 +7,17 @@ import {
   FiMoreHorizontal,
 } from "react-icons/fi";
 import { useGetNhanViens } from "../hooks/useNhanVien";
+import { useGetCuaHangs } from "../../cua-hang/hooks/useCuaHang";
 import type { GetNhanVienParams } from "../../../types/nhan-vien";
-import { getRoleName } from "../../../utils/roleUtils";
+import { getRoleName, roles } from "../../../utils/roleUtils";
+import { getAccountStatusName, accountStatuses } from "../../../utils/statusUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
+import { useAppSelector } from "../../../store";
 
 const NhanVienListPage = () => {
+  const { user } = useAppSelector((state) => state.auth);
+  const role = user?.tennhom;
+
   const [params, setParams] = useState<GetNhanVienParams>({
     page: 0,
     size: 10,
@@ -33,6 +39,9 @@ const NhanVienListPage = () => {
   const nhanViens = apiResponse?.data?.content || [];
   const totalElements = apiResponse?.data?.totalElements || 0;
   const totalPages = Math.ceil(totalElements / (params.size || 10));
+
+  const { data: cuaHangsResponse } = useGetCuaHangs();
+  const cuaHangs = cuaHangsResponse?.data || [];
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 0 && newPage < totalPages) {
@@ -103,21 +112,41 @@ const NhanVienListPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5 w-48">
-          <label className="text-sm font-medium text-gray-700">Cửa hàng</label>
-          <div className="relative">
-            <select className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
-              <option value="">Tất cả</option>
-            </select>
-            <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+        {role !== "QuanLyCuaHang" && (
+          <div className="flex flex-col gap-1.5 w-48">
+            <label className="text-sm font-medium text-gray-700">Cửa hàng</label>
+            <div className="relative">
+              <select 
+                className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                value={params.mach || ""}
+                onChange={(e) => setParams((prev) => ({ ...prev, mach: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
+              >
+                <option value="">Tất cả</option>
+                {cuaHangs.map((ch) => (
+                  <option key={ch.maCh} value={ch.maCh}>
+                    {ch.tenCh}
+                  </option>
+                ))}
+              </select>
+              <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex flex-col gap-1.5 w-48">
           <label className="text-sm font-medium text-gray-700">Chức vụ</label>
           <div className="relative">
-            <select className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
+            <select 
+              className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+              value={params.chucvu || ""}
+              onChange={(e) => setParams((prev) => ({ ...prev, chucvu: e.target.value || undefined, page: 0 }))}
+            >
               <option value="">Tất cả</option>
+              {roles.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
             </select>
             <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           </div>
@@ -128,8 +157,17 @@ const NhanVienListPage = () => {
             Trạng thái TK
           </label>
           <div className="relative">
-            <select className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
+            <select 
+              className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+              value={params.trangthai || ""}
+              onChange={(e) => setParams((prev) => ({ ...prev, trangthai: e.target.value || undefined, page: 0 }))}
+            >
               <option value="">Tất cả</option>
+              {accountStatuses.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
             </select>
             <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           </div>
@@ -203,12 +241,12 @@ const NhanVienListPage = () => {
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           row.trangThai === "HoatDong"
                             ? "bg-green-100 text-green-800"
+                            : row.trangThai === "KhoaTam"
+                            ? "bg-yellow-100 text-yellow-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {row.trangThai === "HoatDong"
-                          ? "Hoạt động"
-                          : row.trangThai}
+                        {getAccountStatusName(row.trangThai)}
                       </span>
                     </td>
                     <td className="px-6 py-4">

@@ -15,7 +15,8 @@ import { CaiDatPage } from './features/cai-dat'
 import { useAppDispatch } from './store'
 import { fetchCurrentUser } from './store/authSlice'
 
-import { ProtectedRoute, PublicRoute } from './components/auth'
+import { ProtectedRoute, PublicRoute, RoleProtectedRoute } from './components/auth'
+import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
   const dispatch = useAppDispatch()
@@ -39,7 +40,11 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/employees" element={<NhanVienListPage />} />
+            
+            {/* Role protected routes */}
+            <Route element={<RoleProtectedRoute allowedRoles={['Admin', 'QuanLyCuaHang']} />}>
+              <Route path="/employees" element={<NhanVienListPage />} />
+            </Route>
             <Route path="/stores" element={<CuaHangPage />} />
             <Route path="/products" element={<SanPhamPage />} />
             <Route path="/inventory" element={<TonKhoPage />} />
@@ -53,7 +58,7 @@ function App() {
 
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

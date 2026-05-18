@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
+import { toast } from "react-hot-toast";
 import { useCreateNhanVien } from "../hooks/useNhanVien";
 import { roles } from "../../../utils/roleUtils";
 import { useAppSelector } from "../../../store";
@@ -10,9 +11,15 @@ interface NhanVienModalProps {
   isOpen: boolean;
   onClose: () => void;
   cuaHangs: CuaHang[];
+  onSuccessAction?: () => void;
 }
 
-const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
+const NhanVienModal = ({
+  isOpen,
+  onClose,
+  cuaHangs,
+  onSuccessAction,
+}: NhanVienModalProps) => {
   const { user } = useAppSelector((state) => state.auth);
   const role = user?.tennhom; // "Admin", "QuanLyCuaHang", etc.
   const userMaCh = user?.nhanvien?.mach;
@@ -45,7 +52,12 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
         sdt: "",
         diaChi: "",
         chucVu: "NhanVienBan",
-        maCh: role !== "Admin" && userMaCh ? userMaCh : (cuaHangs.length > 0 ? cuaHangs[0].maCh : 0),
+        maCh:
+          role !== "Admin" && userMaCh
+            ? userMaCh
+            : cuaHangs.length > 0
+              ? cuaHangs[0].maCh
+              : 0,
         tenNhom: "NhanVienBan",
         password: "",
         trangThai: "HoatDong",
@@ -53,10 +65,17 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
     }
   }, [isOpen, role, userMaCh, cuaHangs]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => {
-      const newData = { ...prev, [name]: name === "maCh" ? Number(value) : value };
+      const newData = {
+        ...prev,
+        [name]: name === "maCh" ? Number(value) : value,
+      };
       if (name === "chucVu") {
         newData.tenNhom = value; // Sync tenNhom with chucVu
       }
@@ -66,15 +85,43 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
+    const hoTenTrimmed = formData.hoTen.trim();
+    if (hoTenTrimmed.split(/\s+/).length < 2) {
+      toast.error("Họ tên phải từ 2 chữ trở lên");
+      return;
+    }
+    if (hoTenTrimmed.length >= 40) {
+      toast.error("Họ tên phải dưới 40 ký tự");
+      return;
+    }
+
+    if (!/^\d{12}$/.test(formData.cccd)) {
+      toast.error("CCCD phải bao gồm đúng 12 chữ số");
+      return;
+    }
+
+    if (!/^0\d{9}$/.test(formData.sdt)) {
+      toast.error(
+        "Số điện thoại không hợp lệ (phải bắt đầu bằng 0 và có đúng 10 chữ số)",
+      );
+      return;
+    }
+
     createMutation.mutate(formData, {
       onSuccess: () => {
         onClose();
-        // Optional: Add toast notification for success here
+        toast.success("Thêm nhân viên thành công!");
+        if (onSuccessAction) onSuccessAction();
       },
-      onError: (error) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onError: (error: any) => {
         console.error("Lỗi khi thêm nhân viên:", error);
-        // Optional: Add toast notification for error here
-      }
+        const errorMessage =
+          error?.message || "Đã xảy ra lỗi khi thêm nhân viên.";
+        toast.error(errorMessage);
+      },
     });
   };
 
@@ -84,7 +131,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-          <h2 className="text-xl font-bold text-gray-800">Thêm nhân viên mới</h2>
+          <h2 className="text-xl font-bold text-gray-800">
+            Thêm nhân viên mới
+          </h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-500 hover:bg-gray-200 rounded-full transition-colors"
@@ -94,10 +143,16 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
         </div>
 
         <div className="p-6 overflow-y-auto flex-1">
-          <form id="add-nhanvien-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <form
+            id="add-nhanvien-form"
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-2 gap-5"
+          >
             {/* Họ tên */}
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label className="text-sm font-medium text-gray-700">Họ và tên <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Họ và tên <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="hoTen"
@@ -111,7 +166,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
             {/* CCCD */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">CCCD <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                CCCD <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="cccd"
@@ -125,7 +182,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
             {/* Số điện thoại */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Số điện thoại <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Số điện thoại <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="sdt"
@@ -139,7 +198,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
             {/* Ngày sinh */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Ngày sinh <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Ngày sinh <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 name="ngaySinh"
@@ -152,7 +213,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
             {/* Giới tính */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Giới tính <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Giới tính <span className="text-red-500">*</span>
+              </label>
               <select
                 name="gioiTinh"
                 required
@@ -168,7 +231,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
             {/* Mật khẩu */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Mật khẩu <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Mật khẩu <span className="text-red-500">*</span>
+              </label>
               <input
                 type="password"
                 name="password"
@@ -182,7 +247,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
             {/* Trạng thái */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Trạng thái <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Trạng thái <span className="text-red-500">*</span>
+              </label>
               <select
                 name="trangThai"
                 required
@@ -198,7 +265,9 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
 
             {/* Chức vụ */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Chức vụ <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Chức vụ <span className="text-red-500">*</span>
+              </label>
               <select
                 name="chucVu"
                 required
@@ -206,15 +275,25 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
               >
-                {roles.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
+                {roles
+                  .filter(
+                    (r) =>
+                      r.value !== "Admin" &&
+                      (role === "Admin" || r.value !== "QuanLyCuaHang"),
+                  )
+                  .map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
               </select>
             </div>
 
             {/* Cửa hàng */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Cửa hàng <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Cửa hàng <span className="text-red-500">*</span>
+              </label>
               <select
                 name="maCh"
                 required
@@ -224,17 +303,23 @@ const NhanVienModal = ({ isOpen, onClose, cuaHangs }: NhanVienModalProps) => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-500"
               >
                 {cuaHangs.map((ch) => (
-                  <option key={ch.maCh} value={ch.maCh}>{ch.tenCh}</option>
+                  <option key={ch.maCh} value={ch.maCh}>
+                    {ch.tenCh}
+                  </option>
                 ))}
               </select>
               {role !== "Admin" && (
-                <p className="text-xs text-gray-500 mt-1">Chỉ admin mới có quyền chọn cửa hàng khác.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Chỉ admin mới có quyền chọn cửa hàng khác.
+                </p>
               )}
             </div>
 
             {/* Địa chỉ */}
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label className="text-sm font-medium text-gray-700">Địa chỉ <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700">
+                Địa chỉ <span className="text-red-500">*</span>
+              </label>
               <textarea
                 name="diaChi"
                 required

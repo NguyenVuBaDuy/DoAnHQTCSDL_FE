@@ -14,6 +14,7 @@ import { getAccountStatusName, accountStatuses } from "../../../utils/statusUtil
 import { useDebounce } from "../../../hooks/useDebounce";
 import { useAppSelector } from "../../../store";
 import NhanVienModal from "../components/NhanVienModal";
+import SuccessModal from "../../../components/common/SuccessModal";
 
 const NhanVienListPage = () => {
   const { user } = useAppSelector((state) => state.auth);
@@ -28,6 +29,7 @@ const NhanVienListPage = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -319,6 +321,14 @@ const NhanVienListPage = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         cuaHangs={cuaHangs}
+        onSuccessAction={() => setIsSuccessModalOpen(true)}
+      />
+
+      <SuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title="Thêm thành công"
+        message="Nhân viên mới đã được thêm vào hệ thống."
       />
     </div>
   );

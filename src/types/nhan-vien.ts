@@ -25,3 +25,17 @@ export interface GetNhanVienParams {
   size?: number;
   sort?: string[];
 }
+
+export interface CreateNhanVienRequest {
+  hoTen: string;
+  cccd: string;
+  ngaySinh: string; // YYYY-MM-DD
+  gioiTinh: string; // "Nam", "Nữ", etc.
+  sdt: string;
+  diaChi: string;
+  chucVu: string;
+  maCh: number;
+  tenNhom: string;
+  password?: string;
+  trangThai: string;
+}

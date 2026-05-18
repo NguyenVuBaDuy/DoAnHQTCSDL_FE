@@ -13,6 +13,7 @@ import { getRoleName, roles } from "../../../utils/roleUtils";
 import { getAccountStatusName, accountStatuses } from "../../../utils/statusUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { useAppSelector } from "../../../store";
+import NhanVienModal from "../components/NhanVienModal";
 
 const NhanVienListPage = () => {
   const { user } = useAppSelector((state) => state.auth);
@@ -25,6 +26,8 @@ const NhanVienListPage = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -61,7 +64,10 @@ const NhanVienListPage = () => {
             <FiDownload />
             Xuất Excel
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm">
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+          >
             <FiPlus />
             Thêm nhân viên
           </button>
@@ -308,6 +314,12 @@ const NhanVienListPage = () => {
           </div>
         </div>
       </div>
+
+      <NhanVienModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        cuaHangs={cuaHangs}
+      />
     </div>
   );
 };

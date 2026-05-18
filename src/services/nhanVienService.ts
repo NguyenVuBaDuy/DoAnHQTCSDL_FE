@@ -15,4 +15,10 @@ export const nhanVienService = {
     });
     return data;
   },
+  createNhanVien: async (
+    payload: import("../types/nhan-vien").CreateNhanVienRequest,
+  ): Promise<ApiResponse<null>> => {
+    const { data } = await apiClient.post<ApiResponse<null>>("/nhan-vien", payload);
+    return data;
+  },
 };

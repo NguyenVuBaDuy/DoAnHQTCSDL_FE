@@ -36,15 +36,19 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
         </Route>
 
-        {/* Protected routes with layout */}
+        {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
-          <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            
-            {/* Role protected routes */}
-            <Route element={<RoleProtectedRoute allowedRoles={['Admin', 'QuanLyCuaHang']} />}>
+          
+          {/* Role protected routes with layout */}
+          <Route element={<RoleProtectedRoute allowedRoles={['Admin', 'QuanLyCuaHang']} />}>
+            <Route element={<MainLayout />}>
               <Route path="/employees" element={<NhanVienListPage />} />
             </Route>
+          </Route>
+
+          {/* Standard protected routes with layout */}
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/stores" element={<CuaHangPage />} />
             <Route path="/products" element={<SanPhamPage />} />
             <Route path="/inventory" element={<TonKhoPage />} />

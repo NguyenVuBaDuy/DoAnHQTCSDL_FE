@@ -7,11 +7,14 @@ import {
   FiMoreHorizontal,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import { useGetNhanViens, useUpdateTrangThaiNhanVien } from "../hooks/useNhanVien";
+import {
+  useGetNhanViens,
+  useUpdateTrangThaiNhanVien,
+} from "../hooks/useNhanVien";
 import { useGetCuaHangs } from "../../cua-hang/hooks/useCuaHang";
 import type { GetNhanVienParams } from "../../../types/nhan-vien";
-import { getRoleName, roles } from "../../../utils/roleUtils";
-import { getAccountStatusName, accountStatuses } from "../../../utils/statusUtils";
+import { roles, getRoleName } from "../../../utils/roleUtils";
+import { accountStatuses } from "../../../utils/statusUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { useAppSelector } from "../../../store";
 import NhanVienModal from "../components/NhanVienModal";
@@ -30,7 +33,9 @@ const NhanVienListPage = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingNhanVien, setEditingNhanVien] = useState<import('../../../types/nhan-vien').NhanVienListItem | null>(null);
+  const [editingNhanVien, setEditingNhanVien] = useState<
+    import("../../../types/nhan-vien").NhanVienListItem | null
+  >(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   const handleAddClick = () => {
@@ -38,7 +43,9 @@ const NhanVienListPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleEditClick = (nhanVien: import('../../../types/nhan-vien').NhanVienListItem) => {
+  const handleEditClick = (
+    nhanVien: import("../../../types/nhan-vien").NhanVienListItem,
+  ) => {
     setEditingNhanVien(nhanVien);
     setIsModalOpen(true);
   };
@@ -46,13 +53,19 @@ const NhanVienListPage = () => {
   const updateStatusMutation = useUpdateTrangThaiNhanVien();
 
   const handleStatusChange = (maNv: string, newStatus: string) => {
-    updateStatusMutation.mutate({ maNv, data: { trangThai: newStatus } }, {
-      onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
-      onError: (error: any) => {
-        console.error("Lỗi cập nhật trạng thái:", error);
-        toast.error(error?.response?.data?.message || "Cập nhật trạng thái thất bại!");
-      }
-    });
+    updateStatusMutation.mutate(
+      { maNv, data: { trangThai: newStatus } },
+      {
+        onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (error: any) => {
+          console.error("Lỗi cập nhật trạng thái:", error);
+          toast.error(
+            error?.response?.data?.message || "Cập nhật trạng thái thất bại!",
+          );
+        },
+      },
+    );
   };
 
   useEffect(() => {
@@ -90,7 +103,7 @@ const NhanVienListPage = () => {
             <FiDownload />
             Xuất Excel
           </button>
-          <button 
+          <button
             onClick={handleAddClick}
             className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
           >
@@ -146,12 +159,20 @@ const NhanVienListPage = () => {
 
         {role !== "QuanLyCuaHang" && (
           <div className="flex flex-col gap-1.5 w-48">
-            <label className="text-sm font-medium text-gray-700">Cửa hàng</label>
+            <label className="text-sm font-medium text-gray-700">
+              Cửa hàng
+            </label>
             <div className="relative">
-              <select 
+              <select
                 className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
                 value={params.mach || ""}
-                onChange={(e) => setParams((prev) => ({ ...prev, mach: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
+                onChange={(e) =>
+                  setParams((prev) => ({
+                    ...prev,
+                    mach: e.target.value ? Number(e.target.value) : undefined,
+                    page: 0,
+                  }))
+                }
               >
                 <option value="">Tất cả</option>
                 {cuaHangs.map((ch) => (
@@ -168,10 +189,16 @@ const NhanVienListPage = () => {
         <div className="flex flex-col gap-1.5 w-48">
           <label className="text-sm font-medium text-gray-700">Chức vụ</label>
           <div className="relative">
-            <select 
+            <select
               className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
               value={params.chucvu || ""}
-              onChange={(e) => setParams((prev) => ({ ...prev, chucvu: e.target.value || undefined, page: 0 }))}
+              onChange={(e) =>
+                setParams((prev) => ({
+                  ...prev,
+                  chucvu: e.target.value || undefined,
+                  page: 0,
+                }))
+              }
             >
               <option value="">Tất cả</option>
               {roles.map((role) => (
@@ -189,10 +216,16 @@ const NhanVienListPage = () => {
             Trạng thái TK
           </label>
           <div className="relative">
-            <select 
+            <select
               className="w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
               value={params.trangthai || ""}
-              onChange={(e) => setParams((prev) => ({ ...prev, trangthai: e.target.value || undefined, page: 0 }))}
+              onChange={(e) =>
+                setParams((prev) => ({
+                  ...prev,
+                  trangthai: e.target.value || undefined,
+                  page: 0,
+                }))
+              }
             >
               <option value="">Tất cả</option>
               {accountStatuses.map((status) => (
@@ -272,18 +305,27 @@ const NhanVienListPage = () => {
                       <div className="relative inline-block">
                         <select
                           value={row.trangThai}
-                          onChange={(e) => handleStatusChange(row.maNv, e.target.value)}
-                          disabled={updateStatusMutation.isPending && updateStatusMutation.variables?.maNv === row.maNv}
+                          onChange={(e) =>
+                            handleStatusChange(row.maNv, e.target.value)
+                          }
+                          disabled={
+                            updateStatusMutation.isPending &&
+                            updateStatusMutation.variables?.maNv === row.maNv
+                          }
                           className={`appearance-none cursor-pointer outline-none inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border-none pr-5 focus:ring-2 focus:ring-blue-500 transition-colors ${
                             row.trangThai === "HoatDong"
                               ? "bg-green-100 text-green-800"
                               : row.trangThai === "KhoaTam"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
                           } disabled:opacity-50`}
                         >
                           {accountStatuses.map((status) => (
-                            <option key={status.value} value={status.value} className="bg-white text-gray-900">
+                            <option
+                              key={status.value}
+                              value={status.value}
+                              className="bg-white text-gray-900"
+                            >
                               {status.label}
                             </option>
                           ))}
@@ -293,7 +335,7 @@ const NhanVienListPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center">
-                        <button 
+                        <button
                           onClick={() => handleEditClick(row)}
                           className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-md hover:bg-blue-50 mr-2 text-sm font-medium"
                         >
@@ -369,7 +411,11 @@ const NhanVienListPage = () => {
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
         title={editingNhanVien ? "Cập nhật thành công" : "Thêm thành công"}
-        message={editingNhanVien ? "Thông tin nhân viên đã được cập nhật." : "Nhân viên mới đã được thêm vào hệ thống."}
+        message={
+          editingNhanVien
+            ? "Thông tin nhân viên đã được cập nhật."
+            : "Nhân viên mới đã được thêm vào hệ thống."
+        }
       />
     </div>
   );

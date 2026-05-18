@@ -18,6 +18,7 @@ import { accountStatuses } from "../../../utils/statusUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { useAppSelector } from "../../../store";
 import NhanVienModal from "../components/NhanVienModal";
+import NhanVienDetailDrawer from "../components/NhanVienDetailDrawer";
 import SuccessModal from "../../../components/common/SuccessModal";
 
 const NhanVienListPage = () => {
@@ -38,6 +39,11 @@ const NhanVienListPage = () => {
   >(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+  const [viewingNhanVien, setViewingNhanVien] = useState<
+    import("../../../types/nhan-vien").NhanVienListItem | null
+  >(null);
+
   const handleAddClick = () => {
     setEditingNhanVien(null);
     setIsModalOpen(true);
@@ -48,6 +54,13 @@ const NhanVienListPage = () => {
   ) => {
     setEditingNhanVien(nhanVien);
     setIsModalOpen(true);
+  };
+
+  const handleViewClick = (
+    nhanVien: import("../../../types/nhan-vien").NhanVienListItem,
+  ) => {
+    setViewingNhanVien(nhanVien);
+    setIsDetailDrawerOpen(true);
   };
 
   const updateStatusMutation = useUpdateTrangThaiNhanVien();
@@ -336,6 +349,12 @@ const NhanVienListPage = () => {
                     <td className="px-6 py-4">
                       <div className="flex justify-center">
                         <button
+                          onClick={() => handleViewClick(row)}
+                          className="text-gray-600 hover:text-gray-900 transition-colors p-1 rounded-md hover:bg-gray-100 mr-2 text-sm font-medium"
+                        >
+                          Chi tiết
+                        </button>
+                        <button
                           onClick={() => handleEditClick(row)}
                           className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-md hover:bg-blue-50 mr-2 text-sm font-medium"
                         >
@@ -405,6 +424,12 @@ const NhanVienListPage = () => {
         cuaHangs={cuaHangs}
         initialData={editingNhanVien}
         onSuccessAction={() => setIsSuccessModalOpen(true)}
+      />
+
+      <NhanVienDetailDrawer
+        isOpen={isDetailDrawerOpen}
+        onClose={() => setIsDetailDrawerOpen(false)}
+        nhanVien={viewingNhanVien}
       />
 
       <SuccessModal

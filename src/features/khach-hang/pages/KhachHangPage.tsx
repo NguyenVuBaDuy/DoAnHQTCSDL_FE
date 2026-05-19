@@ -5,6 +5,8 @@ import type { GetKhachHangParams } from "../../../types/khach-hang";
 import { useDebounce } from "../../../hooks/useDebounce";
 // import { useAppSelector } from "../../../store";
 import { format } from "date-fns";
+import KhachHangModal from "../components/KhachHangModal";
+import type { KhachHang } from "../../../types/khach-hang";
 
 const KhachHangPage = () => {
   // const { user } = useAppSelector((state) => state.auth);
@@ -17,6 +19,9 @@ const KhachHangPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedKhachHang, setSelectedKhachHang] = useState<KhachHang | null>(null);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setParams((prev) => ({
@@ -25,6 +30,21 @@ const KhachHangPage = () => {
       page: 0,
     }));
   }, [debouncedSearchTerm]);
+
+  const handleOpenModal = () => {
+    setSelectedKhachHang(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditKhachHang = (khachHang: KhachHang) => {
+    setSelectedKhachHang(khachHang);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedKhachHang(null);
+  };
 
   const { data: apiResponse, isLoading, isError } = useGetKhachHangs(params);
   const khachHangs = apiResponse?.data?.content || [];
@@ -49,7 +69,10 @@ const KhachHangPage = () => {
             <FiDownload />
             Xuất Excel
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm">
+          <button 
+            onClick={handleOpenModal}
+            className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+          >
             <FiPlus />
             Thêm khách hàng
           </button>
@@ -165,7 +188,10 @@ const KhachHangPage = () => {
                         <button className="text-gray-600 hover:text-gray-900 transition-colors p-1 rounded-md hover:bg-gray-100 mr-2 text-sm font-medium">
                           Chi tiết
                         </button>
-                        <button className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-md hover:bg-blue-50 mr-2 text-sm font-medium">
+                        <button 
+                          onClick={() => handleEditKhachHang(row)}
+                          className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-md hover:bg-blue-50 mr-2 text-sm font-medium"
+                        >
                           Sửa
                         </button>
                         <button className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100">
@@ -225,6 +251,15 @@ const KhachHangPage = () => {
           </div>
         </div>
       </div>
+
+      <KhachHangModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        initialData={selectedKhachHang}
+        onSuccessAction={() => {
+          // You might want to refresh data here if not handled by invalidateQueries
+        }}
+      />
     </div>
   );
 };

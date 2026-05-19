@@ -13,4 +13,25 @@ export const khachHangService = {
     });
     return data;
   },
+
+  createKhachHang: async (
+    payload: import("../types/khach-hang").CreateKhachHangRequest,
+  ): Promise<ApiResponse<KhachHang>> => {
+    const { data } = await apiClient.post<ApiResponse<KhachHang>>(
+      "/khachhang",
+      payload,
+    );
+    return data;
+  },
+
+  updateKhachHang: async (
+    id: number,
+    payload: import("../types/khach-hang").CreateKhachHangRequest,
+  ): Promise<ApiResponse<KhachHang>> => {
+    const { data } = await apiClient.put<ApiResponse<KhachHang>>(
+      `/khachhang/${id}`,
+      payload,
+    );
+    return data;
+  },
 };

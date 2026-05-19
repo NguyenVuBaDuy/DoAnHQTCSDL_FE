@@ -54,6 +54,9 @@ const Sidebar = () => {
       <nav className="flex-1 overflow-y-auto px-4 space-y-1">
         {mainNavItems
           .filter((item) => {
+            if (item.to === "/stores") {
+              return role === "Admin";
+            }
             if (item.to === "/employees") {
               return role !== "NhanVienBan" && role !== "NhanVienKho";
             }

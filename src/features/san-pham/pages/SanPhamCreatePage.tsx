@@ -195,6 +195,10 @@ const SanPhamCreatePage = () => {
       toast.error("Vui lòng chọn danh mục chính!");
       return;
     }
+    if (childCategories.length > 0 && !selectedChildId) {
+      toast.error("Vui lòng chọn danh mục con!");
+      return;
+    }
 
     const maDm = selectedChildId
       ? Number(selectedChildId)
@@ -589,12 +593,13 @@ const SanPhamCreatePage = () => {
                               Giá nhập (đ)
                             </label>
                             <input
-                              type="number"
-                              min={0}
-                              value={v.giaNhap === 0 ? "" : v.giaNhap}
+                              type="text"
+                              inputMode="numeric"
+                              value={v.giaNhap === 0 ? "" : v.giaNhap.toLocaleString("vi-VN")}
                               placeholder="0"
                               onChange={(e) => {
-                                const val = e.target.value ? Number(e.target.value) : 0;
+                                const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, "");
+                                const val = raw ? Number(raw) : 0;
                                 const updated = [...variants];
                                 updated[idx].giaNhap = val;
                                 setVariants(updated);
@@ -607,13 +612,13 @@ const SanPhamCreatePage = () => {
                               Giá bán (đ) <span className="text-red-400">*</span>
                             </label>
                             <input
-                              type="number"
-                              min={0}
-                              required
-                              value={v.giaBan === 0 ? "" : v.giaBan}
+                              type="text"
+                              inputMode="numeric"
+                              value={v.giaBan === 0 ? "" : v.giaBan.toLocaleString("vi-VN")}
                               placeholder="0"
                               onChange={(e) => {
-                                const val = e.target.value ? Number(e.target.value) : 0;
+                                const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, "");
+                                const val = raw ? Number(raw) : 0;
                                 const updated = [...variants];
                                 updated[idx].giaBan = val;
                                 setVariants(updated);
@@ -770,7 +775,7 @@ const SanPhamCreatePage = () => {
                 {/* Subcategory */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-                    Danh mục con
+                    Danh mục con {childCategories.length > 0 && <span className="text-red-500">*</span>}
                   </label>
                   <select
                     value={selectedChildId}

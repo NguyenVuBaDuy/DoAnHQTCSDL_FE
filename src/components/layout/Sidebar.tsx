@@ -60,6 +60,9 @@ const Sidebar = () => {
             if (item.to === "/employees") {
               return role !== "NhanVienBan" && role !== "NhanVienKho";
             }
+            if (item.to === "/customers") {
+              return role === "Admin";
+            }
             return true;
           })
           .map((item) => (

@@ -48,14 +48,19 @@ function App() {
             </Route>
           </Route>
 
+          {/* Admin only routes with layout */}
+          <Route element={<RoleProtectedRoute allowedRoles={['Admin']} />}>
+            <Route element={<MainLayout />}>
+              <Route path="/stores" element={<CuaHangPage />} />
+              <Route path="/customers" element={<KhachHangPage />} />
+            </Route>
+          </Route>
           {/* Standard protected routes with layout */}
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/stores" element={<CuaHangPage />} />
             <Route path="/products" element={<SanPhamPage />} />
             <Route path="/inventory" element={<TonKhoPage />} />
             <Route path="/invoices" element={<HoaDonPage />} />
-            <Route path="/customers" element={<KhachHangPage />} />
             <Route path="/vouchers" element={<VoucherPage />} />
             <Route path="/reports" element={<BaoCaoPage />} />
             <Route path="/settings" element={<CaiDatPage />} />

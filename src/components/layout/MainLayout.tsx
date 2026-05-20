@@ -4,7 +4,7 @@ import Header from './Header'
 
 const MainLayout = () => {
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <div className="h-screen bg-[#F8F9FA] overflow-hidden">
       {/* Sidebar */}
       <Sidebar />
 
@@ -12,8 +12,8 @@ const MainLayout = () => {
       <Header />
 
       {/* Main Content Area */}
-      <main className="ml-[220px] mt-12 min-h-[calc(100vh-48px)] overflow-auto">
-        <div className="p-6 space-y-6">
+      <main className="ml-[220px] mt-12 h-[calc(100vh-48px)] overflow-auto relative z-0">
+        <div className="p-6 space-y-6 min-h-full">
           <Outlet />
         </div>
       </main>

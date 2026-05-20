@@ -35,6 +35,15 @@ export const sanPhamService = {
     return data;
   },
 
+  getSanPhamDetail: async (
+    maSp: number,
+  ): Promise<ApiResponse<SanPham>> => {
+    const { data } = await apiClient.get<ApiResponse<SanPham>>(
+      `/admin/san-pham/${maSp}`,
+    );
+    return data;
+  },
+
   createSanPham: async (
     payload: CreateSanPhamRequest,
   ): Promise<ApiResponse<SanPham>> => {
@@ -44,5 +53,15 @@ export const sanPhamService = {
     );
     return data;
   },
-};
 
+  updateSanPham: async (
+    maSp: number,
+    payload: CreateSanPhamRequest,
+  ): Promise<ApiResponse<SanPham>> => {
+    const { data } = await apiClient.put<ApiResponse<SanPham>>(
+      `/admin/san-pham/${maSp}`,
+      payload,
+    );
+    return data;
+  },
+};

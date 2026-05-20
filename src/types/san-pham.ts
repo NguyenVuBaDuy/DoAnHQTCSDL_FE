@@ -19,7 +19,21 @@ export interface SanPham {
     minGiaNhap: number;
     maxGiaNhap: number;
   };
-  variants: any | null; // We can type this more strictly later if needed
+  variants: SanPhamVariant[] | null;
+}
+
+export interface SanPhamVariant {
+  maBienThe: number;
+  maSp: number;
+  tenSp: string;
+  sku: string;
+  barcode: string;
+  mauSac: string;
+  dungLuong: string;
+  kichThuoc: string;
+  giaNhap: number;
+  giaBan: number;
+  trangThai: string;
 }
 
 export interface GetSanPhamParams {

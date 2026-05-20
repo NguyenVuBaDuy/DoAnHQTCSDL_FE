@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FiDownload, FiPlus, FiSearch, FiFilter, FiMoreHorizontal, FiLoader, FiEye, FiEdit, FiTrash2 } from "react-icons/fi";
 import CategoryTree from "../components/CategoryTree";
@@ -6,6 +7,7 @@ import { sanPhamService } from "../../../services/sanPhamService";
 import type { GetSanPhamParams, SanPham } from "../../../types/san-pham";
 
 const SanPhamPage = () => {
+  const navigate = useNavigate();
   const [params, setParams] = useState<GetSanPhamParams>({
     page: 0,
     size: 10, // Default to 10 as per pagination UI
@@ -70,7 +72,10 @@ const SanPhamPage = () => {
               <FiDownload />
               Xuất Excel
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm">
+            <button 
+              onClick={() => navigate("/products/create")}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+            >
               <FiPlus />
               Thêm sản phẩm
             </button>

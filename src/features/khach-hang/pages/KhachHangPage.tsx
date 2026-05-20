@@ -7,6 +7,7 @@ import { useDebounce } from "../../../hooks/useDebounce";
 import { format } from "date-fns";
 import KhachHangModal from "../components/KhachHangModal";
 import type { KhachHang } from "../../../types/khach-hang";
+import KhachHangDetailDrawer from "../components/KhachHangDetailDrawer";
 
 const KhachHangPage = () => {
   // const { user } = useAppSelector((state) => state.auth);
@@ -20,7 +21,12 @@ const KhachHangPage = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedKhachHang, setSelectedKhachHang] = useState<KhachHang | null>(null);
+  const [selectedKhachHang, setSelectedKhachHang] = useState<KhachHang | null>(
+    null,
+  );
+
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [viewingKhachHang, setViewingKhachHang] = useState<KhachHang | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -46,6 +52,16 @@ const KhachHangPage = () => {
     setSelectedKhachHang(null);
   };
 
+  const handleViewKhachHang = (khachHang: KhachHang) => {
+    setViewingKhachHang(khachHang);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    setViewingKhachHang(null);
+  };
+
   const { data: apiResponse, isLoading, isError } = useGetKhachHangs(params);
   const khachHangs = apiResponse?.data?.content || [];
   const totalElements = apiResponse?.data?.totalElements || 0;
@@ -69,7 +85,7 @@ const KhachHangPage = () => {
             <FiDownload />
             Xuất Excel
           </button>
-          <button 
+          <button
             onClick={handleOpenModal}
             className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
           >
@@ -165,7 +181,7 @@ const KhachHangPage = () => {
                     className="border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0"
                   >
                     <td className="px-6 py-4 font-medium text-gray-900">
-                      KH{String(row.maKh).padStart(4, "0")}
+                      {row.maKh}
                     </td>
                     <td className="px-6 py-4 font-medium text-gray-900">
                       {row.hoTen}
@@ -185,10 +201,13 @@ const KhachHangPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center">
-                        <button className="text-gray-600 hover:text-gray-900 transition-colors p-1 rounded-md hover:bg-gray-100 mr-2 text-sm font-medium">
+                        <button
+                          onClick={() => handleViewKhachHang(row)}
+                          className="text-gray-600 hover:text-gray-900 transition-colors p-1 rounded-md hover:bg-gray-100 mr-2 text-sm font-medium"
+                        >
                           Chi tiết
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleEditKhachHang(row)}
                           className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-md hover:bg-blue-50 mr-2 text-sm font-medium"
                         >
@@ -259,6 +278,12 @@ const KhachHangPage = () => {
         onSuccessAction={() => {
           // You might want to refresh data here if not handled by invalidateQueries
         }}
+      />
+      
+      <KhachHangDetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={handleCloseDrawer}
+        khachHang={viewingKhachHang}
       />
     </div>
   );

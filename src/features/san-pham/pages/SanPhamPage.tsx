@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FiDownload, FiPlus, FiSearch, FiFilter, FiMoreHorizontal, FiLoader, FiEye, FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiPlus, FiSearch, FiMoreHorizontal, FiLoader, FiEye, FiEdit, FiTrash2 } from "react-icons/fi";
 import CategoryTree from "../components/CategoryTree";
 import { sanPhamService } from "../../../services/sanPhamService";
 import type { GetSanPhamParams, SanPham } from "../../../types/san-pham";
@@ -126,10 +126,7 @@ const SanPhamPage = () => {
             </select>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm h-10">
-            <FiFilter />
-            Lọc nâng cao
-          </button>
+
         </div>
 
         {/* Main Table Area */}

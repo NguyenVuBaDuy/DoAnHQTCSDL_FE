@@ -199,13 +199,6 @@ const SanPhamUpdatePage = () => {
     ]);
   };
 
-  // Remove Variant manually
-  const handleRemoveVariant = (index: number) => {
-    const updated = [...variants];
-    updated.splice(index, 1);
-    setVariants(updated);
-  };
-
   // Add Image URL
   const handleAddImageUrl = () => {
     if (!newImageUrl.trim()) return;
@@ -566,19 +559,10 @@ const SanPhamUpdatePage = () => {
                         key={idx}
                         className="border border-gray-200 rounded-xl bg-gray-50/40 p-4 hover:border-blue-200 transition-colors"
                       >
-                        {/* Card header */}
                         <div className="flex items-center justify-between mb-3">
                           <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
                             Biến thể #{idx + 1}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveVariant(idx)}
-                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                            title="Xóa biến thể"
-                          >
-                            <FiX size={14} />
-                          </button>
                         </div>
 
                         {/* Row 1: Thuộc tính */}

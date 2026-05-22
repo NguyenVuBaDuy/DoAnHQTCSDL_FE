@@ -141,9 +141,15 @@ const SanPhamDetailPage = () => {
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                   product.trangThai === "DangBan" 
                     ? "bg-green-50 text-green-700 border border-green-200" 
-                    : "bg-red-50 text-red-700 border border-red-200"
+                    : product.trangThai === "NgungBan"
+                      ? "bg-red-50 text-red-700 border border-red-200"
+                      : "bg-yellow-50 text-yellow-700 border border-yellow-200"
                 }`}>
-                  {product.trangThai === "DangBan" ? "Đang bán" : "Ngừng kinh doanh"}
+                  {product.trangThai === "DangBan" 
+                    ? "Đang bán" 
+                    : product.trangThai === "NgungBan" 
+                      ? "Ngừng bán" 
+                      : "Hết hàng"}
                 </span>
               </div>
 
@@ -266,9 +272,15 @@ const SanPhamDetailPage = () => {
                               <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                                 v.trangThai === "DangBan"
                                   ? "bg-green-50 text-green-700 border border-green-200"
-                                  : "bg-red-50 text-red-700 border border-red-200"
+                                  : v.trangThai === "NgungBan"
+                                    ? "bg-red-50 text-red-700 border border-red-200"
+                                    : "bg-yellow-50 text-yellow-700 border border-yellow-200"
                               }`}>
-                                {v.trangThai === "DangBan" ? "Đang bán" : "Ngừng bán"}
+                                {v.trangThai === "DangBan" 
+                                  ? "Đang bán" 
+                                  : v.trangThai === "NgungBan" 
+                                    ? "Ngừng bán" 
+                                    : "Hết hàng"}
                               </span>
                             </td>
                           </tr>

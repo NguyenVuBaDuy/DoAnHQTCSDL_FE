@@ -17,6 +17,18 @@ const SanPhamPage = () => {
   });
 
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setParams((prev) => {
+        if (prev.search === searchValue) return prev;
+        return { ...prev, search: searchValue, page: 0 };
+      });
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchValue]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,7 +49,7 @@ const SanPhamPage = () => {
   const pageData = response?.data;
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setParams({ ...params, search: e.target.value, page: 0 });
+    setSearchValue(e.target.value);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -47,7 +59,10 @@ const SanPhamPage = () => {
   return (
     <div className="fixed top-12 left-[220px] right-0 bottom-0 flex bg-[#F8F9FA] overflow-hidden z-30">
       {/* Left Sidebar - Category Tree */}
-      <CategoryTree />
+      <CategoryTree 
+        selectedCategoryId={params.maDm}
+        onSelectCategory={(maDm) => setParams({ ...params, maDm, page: 0 })}
+      />
 
       {/* Right Main Content Area */}
       <div className="flex-1 p-6 flex flex-col min-w-0 min-h-0 bg-transparent rounded-none overflow-hidden">
@@ -91,7 +106,7 @@ const SanPhamPage = () => {
                 type="text"
                 placeholder="Tìm theo tên, mã sản phẩm, thương hiệu..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                value={params.search || ""}
+                value={searchValue}
                 onChange={handleSearchChange}
               />
             </div>
@@ -106,7 +121,8 @@ const SanPhamPage = () => {
             >
               <option value="">Tất cả</option>
               <option value="DangBan">Đang bán</option>
-              <option value="NgungKinhDoanh">Ngừng kinh doanh</option>
+              <option value="NgungBan">Ngừng bán</option>
+              <option value="HetHang">Hết hàng</option>
             </select>
           </div>
 
@@ -168,9 +184,17 @@ const SanPhamPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                          sp.trangThai === 'DangBan' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                          sp.trangThai === 'DangBan' 
+                            ? 'bg-green-50 text-green-700 border border-green-200' 
+                            : sp.trangThai === 'NgungBan' 
+                              ? 'bg-red-50 text-red-700 border border-red-200' 
+                              : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                         }`}>
-                          {sp.trangThai === 'DangBan' ? 'Đang bán' : 'Ngừng KD'}
+                          {sp.trangThai === 'DangBan' 
+                            ? 'Đang bán' 
+                            : sp.trangThai === 'NgungBan' 
+                              ? 'Ngừng bán' 
+                              : 'Hết hàng'}
                         </span>
                       </td>
                       <td className="px-6 py-4">

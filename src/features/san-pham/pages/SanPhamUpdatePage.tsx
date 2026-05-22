@@ -12,8 +12,6 @@ import {
   FiTag,
   FiHelpCircle,
   FiFileText,
-  FiToggleLeft,
-  FiToggleRight,
   FiLoader,
 } from "react-icons/fi";
 import { danhMucService } from "../../../services/danhMucService";
@@ -45,7 +43,7 @@ const SanPhamUpdatePage = () => {
   const [thuongHieu, setThuongHieu] = useState("");
   const [selectedParentId, setSelectedParentId] = useState<number | "">("");
   const [selectedChildId, setSelectedChildId] = useState<number | "">("");
-  const [isPublic, setIsPublic] = useState(true);
+  const [trangThai, setTrangThai] = useState("DangBan");
 
   // Square image preview initialized to null
   const [image, setImage] = useState<string | null>(null);
@@ -86,11 +84,12 @@ const SanPhamUpdatePage = () => {
     const product = detailResponse?.data;
     if (!product || isInitialized || isCatLoading) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTenSp(product.tenSp || "");
     setMoTa(product.moTa || "");
     setThuongHieu(product.thuongHieu || "");
     setImage(product.anh || null);
-    setIsPublic(product.trangThai === "DangBan");
+    setTrangThai(product.trangThai || "DangBan");
 
     // Set category
     const cat = product.category;
@@ -301,7 +300,7 @@ const SanPhamUpdatePage = () => {
       thuongHieu: thuongHieu.trim(),
       moTa: moTa.trim(),
       anh: image || "",
-      trangThai: isPublic ? "DangBan" : "NgungBan",
+      trangThai: trangThai,
       variants: payloadVariants,
     };
 
@@ -643,10 +642,16 @@ const SanPhamUpdatePage = () => {
                             <input
                               type="text"
                               inputMode="numeric"
-                              value={v.giaNhap === 0 ? "" : v.giaNhap.toLocaleString("vi-VN")}
+                              value={
+                                v.giaNhap === 0
+                                  ? ""
+                                  : v.giaNhap.toLocaleString("vi-VN")
+                              }
                               placeholder="0"
                               onChange={(e) => {
-                                const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, "");
+                                const raw = e.target.value
+                                  .replace(/\./g, "")
+                                  .replace(/[^0-9]/g, "");
                                 const val = raw ? Number(raw) : 0;
                                 const updated = [...variants];
                                 updated[idx].giaNhap = val;
@@ -657,15 +662,22 @@ const SanPhamUpdatePage = () => {
                           </div>
                           <div>
                             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                              Giá bán (đ) <span className="text-red-400">*</span>
+                              Giá bán (đ){" "}
+                              <span className="text-red-400">*</span>
                             </label>
                             <input
                               type="text"
                               inputMode="numeric"
-                              value={v.giaBan === 0 ? "" : v.giaBan.toLocaleString("vi-VN")}
+                              value={
+                                v.giaBan === 0
+                                  ? ""
+                                  : v.giaBan.toLocaleString("vi-VN")
+                              }
                               placeholder="0"
                               onChange={(e) => {
-                                const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, "");
+                                const raw = e.target.value
+                                  .replace(/\./g, "")
+                                  .replace(/[^0-9]/g, "");
                                 const val = raw ? Number(raw) : 0;
                                 const updated = [...variants];
                                 updated[idx].giaBan = val;
@@ -712,9 +724,12 @@ const SanPhamUpdatePage = () => {
                                 type="button"
                                 onClick={() => {
                                   const prefix = "893";
-                                  const randomDigits = Math.floor(100000000 + Math.random() * 900000000);
+                                  const randomDigits = Math.floor(
+                                    100000000 + Math.random() * 900000000,
+                                  );
                                   const updated = [...variants];
-                                  updated[idx].barcode = `${prefix}${randomDigits}`;
+                                  updated[idx].barcode =
+                                    `${prefix}${randomDigits}`;
                                   setVariants(updated);
                                   toast.success("Đã tạo barcode mới!");
                                 }}
@@ -740,6 +755,7 @@ const SanPhamUpdatePage = () => {
                             >
                               <option value="DangBan">Đang bán</option>
                               <option value="NgungBan">Ngừng bán</option>
+                              <option value="HetHang">Hết hàng</option>
                             </select>
                           </div>
                         </div>
@@ -748,7 +764,8 @@ const SanPhamUpdatePage = () => {
                   </div>
                 ) : (
                   <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-gray-400 text-xs">
-                    Chưa có biến thể nào. Nhấn &quot;Thêm biến thể&quot; để bắt đầu nhập.
+                    Chưa có biến thể nào. Nhấn &quot;Thêm biến thể&quot; để bắt
+                    đầu nhập.
                   </div>
                 )}
               </div>
@@ -760,31 +777,24 @@ const SanPhamUpdatePage = () => {
             {/* Card 4: Status */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
               <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide border-b border-gray-100 pb-3 mb-4">
-                Trạng thái hiển thị
+                Trạng thái sản phẩm
               </h2>
 
               <div className="space-y-3">
-                <div
-                  onClick={() => setIsPublic(!isPublic)}
-                  className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50/50 hover:bg-gray-100/50 cursor-pointer transition-colors"
-                >
-                  <span className="text-xs font-semibold text-gray-700">
-                    Công khai sản phẩm
-                  </span>
-                  <button
-                    type="button"
-                    className="text-2xl text-blue-600 focus:outline-none"
+                <div>
+                  <select
+                    value={trangThai}
+                    onChange={(e) => setTrangThai(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-white"
                   >
-                    {isPublic ? (
-                      <FiToggleRight className="w-9 h-6 text-blue-600" />
-                    ) : (
-                      <FiToggleLeft className="w-9 h-6 text-gray-400" />
-                    )}
-                  </button>
+                    <option value="DangBan">Đang bán</option>
+                    <option value="NgungBan">Ngừng bán</option>
+                    <option value="HetHang">Hết hàng</option>
+                  </select>
                 </div>
                 <p className="text-[11px] text-gray-400 italic leading-normal">
-                  Sản phẩm sẽ hiển thị trên hệ thống bán hàng nội bộ và trang
-                  web của cửa hàng ngay sau khi được lưu thành công.
+                  Sản phẩm sẽ được hiển thị hoặc áp dụng các chính sách tương
+                  ứng trên hệ thống dựa vào trạng thái này.
                 </p>
               </div>
             </div>
@@ -823,7 +833,10 @@ const SanPhamUpdatePage = () => {
                 {/* Subcategory */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-                    Danh mục con {childCategories.length > 0 && <span className="text-red-500">*</span>}
+                    Danh mục con{" "}
+                    {childCategories.length > 0 && (
+                      <span className="text-red-500">*</span>
+                    )}
                   </label>
                   <select
                     value={selectedChildId}

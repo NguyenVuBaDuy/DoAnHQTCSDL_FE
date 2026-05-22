@@ -12,7 +12,12 @@ const iconMap: Record<number, React.ElementType> = {
   5: FiWatch,
 };
 
-const CategoryTree = () => {
+interface CategoryTreeProps {
+  selectedCategoryId?: number;
+  onSelectCategory: (maDm: number | undefined) => void;
+}
+
+const CategoryTree = ({ selectedCategoryId, onSelectCategory }: CategoryTreeProps) => {
   const [expanded, setExpanded] = useState<number[]>([]);
 
   const { data: response, isLoading, isError } = useQuery({
@@ -38,7 +43,14 @@ const CategoryTree = () => {
       
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-1">
         {/* All Products */}
-        <button className="flex items-center gap-3 w-full px-3 py-2.5 bg-blue-50 text-blue-600 rounded-lg font-medium text-sm transition-colors">
+        <button 
+          onClick={() => onSelectCategory(undefined)}
+          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+            selectedCategoryId === undefined
+              ? "bg-blue-50 text-blue-600 font-semibold"
+              : "text-gray-700 hover:bg-gray-50"
+          }`}
+        >
           <FiGrid className="text-lg" />
           <span>Tất cả sản phẩm</span>
         </button>
@@ -64,8 +76,17 @@ const CategoryTree = () => {
           return (
             <div key={category.maDm} className="flex flex-col">
               <button 
-                onClick={() => hasChildren && toggleExpand(category.maDm)}
-                className="flex items-center gap-3 w-full px-3 py-2.5 text-gray-700 hover:bg-gray-50 rounded-lg font-medium text-sm transition-colors"
+                onClick={() => {
+                  onSelectCategory(category.maDm);
+                  if (hasChildren) {
+                    toggleExpand(category.maDm);
+                  }
+                }}
+                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                  selectedCategoryId === category.maDm
+                    ? "bg-blue-50 text-blue-600 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
               >
                 <Icon className="text-lg text-gray-500" />
                 <span className="flex-1 text-left">{category.tenDm}</span>
@@ -79,7 +100,12 @@ const CategoryTree = () => {
                   {category.children!.map((child) => (
                     <button 
                       key={child.maDm}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-md transition-colors"
+                      onClick={() => onSelectCategory(child.maDm)}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                        selectedCategoryId === child.maDm
+                          ? "bg-blue-50 text-blue-600 font-semibold"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
                     >
                       {child.tenDm}
                     </button>

@@ -6,7 +6,7 @@ import { MainLayout } from './components/layout'
 import { DashboardPage } from './features/dashboard'
 import { NhanVienListPage } from './features/nhan-vien'
 import { CuaHangPage } from './features/cua-hang'
-import { SanPhamPage, SanPhamCreatePage } from './features/san-pham'
+import { SanPhamPage, SanPhamCreatePage, SanPhamUpdatePage } from './features/san-pham'
 import { TonKhoPage } from './features/ton-kho'
 import { HoaDonPage } from './features/hoa-don'
 import { KhachHangPage } from './features/khach-hang'
@@ -60,6 +60,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/products" element={<SanPhamPage />} />
             <Route path="/products/create" element={<SanPhamCreatePage />} />
+            <Route path="/products/edit/:maSp" element={<SanPhamUpdatePage />} />
             <Route path="/inventory" element={<TonKhoPage />} />
             <Route path="/invoices" element={<HoaDonPage />} />
             <Route path="/vouchers" element={<VoucherPage />} />

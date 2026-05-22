@@ -193,7 +193,10 @@ const SanPhamPage = () => {
                               </button>
                               <button 
                                 className="w-full text-left px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                                onClick={() => setOpenDropdownId(null)}
+                                onClick={() => {
+                                  navigate(`/products/edit/${sp.maSp}`);
+                                  setOpenDropdownId(null);
+                                }}
                               >
                                 <FiEdit className="w-[16px] h-[16px] text-gray-500" />
                                 Chỉnh sửa

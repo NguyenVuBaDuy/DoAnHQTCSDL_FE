@@ -18,4 +18,6 @@ export interface GetTonKhoParams {
   page?: number;
   size?: number;
   sort?: string[];
+  maSp?: number;
 }
+

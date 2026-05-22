@@ -251,7 +251,7 @@ const SanPhamCreatePage = () => {
       kichThuoc: v.kichThuoc.trim() || null,
       giaNhap: Number(v.giaNhap) || 0,
       giaBan: Number(v.giaBan) || 0,
-      trangThai: v.trangThai,
+      trangThai: trangThai === "NgungBan" ? "NgungBan" : v.trangThai,
     }));
 
     const payload = {

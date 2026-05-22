@@ -186,7 +186,10 @@ const SanPhamPage = () => {
                             <div className="absolute right-8 top-0 w-36 bg-white rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-gray-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
                               <button 
                                 className="w-full text-left px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                                onClick={() => setOpenDropdownId(null)}
+                                onClick={() => {
+                                  navigate(`/products/detail/${sp.maSp}`);
+                                  setOpenDropdownId(null);
+                                }}
                               >
                                 <FiEye className="w-[16px] h-[16px] text-gray-500" />
                                 Chi tiết

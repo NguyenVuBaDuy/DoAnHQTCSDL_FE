@@ -1,13 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { FiDownload, FiPlus, FiSearch, FiMoreHorizontal, FiLoader, FiEye, FiEdit, FiTrash2 } from "react-icons/fi";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { FiDownload, FiPlus, FiSearch, FiMoreHorizontal, FiLoader, FiEye, FiEdit, FiChevronDown } from "react-icons/fi";
+import { toast } from "react-hot-toast";
 import CategoryTree from "../components/CategoryTree";
 import { sanPhamService } from "../../../services/sanPhamService";
 import type { GetSanPhamParams, SanPham } from "../../../types/san-pham";
+import { useAppSelector } from "../../../store";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const SanPhamPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAppSelector((state) => state.auth);
+  const role = user?.tennhom;
+
+  const canAdd = role === "Admin" || role === "QuanLyCuaHang";
+  const canEdit = role === "Admin";
+  const canUpdateStatus = role === "Admin";
   const [params, setParams] = useState<GetSanPhamParams>({
     page: 0,
     size: 10, // Default to 10 as per pagination UI
@@ -18,6 +28,25 @@ const SanPhamPage = () => {
 
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [searchValue, setSearchValue] = useState("");
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ maSp, trangThai }: { maSp: number; trangThai: string }) =>
+      sanPhamService.updateTrangThai(maSp, trangThai),
+    onSuccess: () => {
+      toast.success("Cập nhật trạng thái sản phẩm thành công!");
+      queryClient.invalidateQueries({ queryKey: ["san-pham"] });
+    },
+    onError: (error: any) => {
+      console.error("Lỗi cập nhật trạng thái:", error);
+      toast.error(
+        error?.response?.data?.message || "Cập nhật trạng thái sản phẩm thất bại!"
+      );
+    },
+  });
+
+  const handleStatusUpdate = (maSp: number, newStatus: string) => {
+    updateStatusMutation.mutate({ maSp, trangThai: newStatus });
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -87,13 +116,15 @@ const SanPhamPage = () => {
               <FiDownload />
               Xuất Excel
             </button>
-            <button 
-              onClick={() => navigate("/products/create")}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
-            >
-              <FiPlus />
-              Thêm sản phẩm
-            </button>
+            {canAdd && (
+              <button 
+                onClick={() => navigate("/products/create")}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+              >
+                <FiPlus />
+                Thêm sản phẩm
+              </button>
+            )}
           </div>
         </div>
 
@@ -180,19 +211,31 @@ const SanPhamPage = () => {
                         {sp.variantSummary?.activeVariants || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                          sp.trangThai === 'DangBan' 
-                            ? 'bg-green-50 text-green-700 border border-green-200' 
-                            : sp.trangThai === 'NgungBan' 
-                              ? 'bg-red-50 text-red-700 border border-red-200' 
-                              : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                        }`}>
-                          {sp.trangThai === 'DangBan' 
-                            ? 'Đang bán' 
-                            : sp.trangThai === 'NgungBan' 
-                              ? 'Ngừng bán' 
-                              : 'Hết hàng'}
-                        </span>
+                        <div className="relative inline-block">
+                          <select
+                            value={sp.trangThai}
+                            onChange={(e) =>
+                              handleStatusUpdate(sp.maSp, e.target.value)
+                            }
+                            disabled={
+                              !canUpdateStatus ||
+                              (updateStatusMutation.isPending &&
+                                updateStatusMutation.variables?.maSp === sp.maSp)
+                            }
+                            className={`appearance-none cursor-pointer outline-none inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border-none pr-5 focus:ring-2 focus:ring-blue-500 transition-colors ${
+                              sp.trangThai === "DangBan"
+                                ? "bg-green-100 text-green-800"
+                                : sp.trangThai === "NgungBan"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                            } disabled:opacity-50`}
+                          >
+                            <option value="DangBan" className="bg-white text-gray-900">Đang bán</option>
+                            <option value="NgungBan" className="bg-white text-gray-900">Ngừng bán</option>
+                            <option value="HetHang" className="bg-white text-gray-900">Hết hàng</option>
+                          </select>
+                          <FiChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none w-3 h-3 opacity-50 text-gray-700" />
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center relative action-dropdown-container">
@@ -215,24 +258,18 @@ const SanPhamPage = () => {
                                 <FiEye className="w-[16px] h-[16px] text-gray-500" />
                                 Chi tiết
                               </button>
-                              <button 
-                                className="w-full text-left px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                                onClick={() => {
-                                  navigate(`/products/edit/${sp.maSp}`);
-                                  setOpenDropdownId(null);
-                                }}
-                              >
-                                <FiEdit className="w-[16px] h-[16px] text-gray-500" />
-                                Chỉnh sửa
-                              </button>
-                              <div className="border-t border-gray-100 my-1"></div>
-                              <button 
-                                className="w-full text-left px-4 py-2 text-[13px] text-[#BA1A1A] hover:bg-red-50 flex items-center gap-2 transition-colors"
-                                onClick={() => setOpenDropdownId(null)}
-                              >
-                                <FiTrash2 className="w-[16px] h-[16px] text-[#BA1A1A]" />
-                                Xóa
-                              </button>
+                              {canEdit && (
+                                <button 
+                                  className="w-full text-left px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                                  onClick={() => {
+                                    navigate(`/products/edit/${sp.maSp}`);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  <FiEdit className="w-[16px] h-[16px] text-gray-500" />
+                                  Chỉnh sửa
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>

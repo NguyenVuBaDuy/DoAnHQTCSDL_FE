@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { FiPlus, FiTrash2, FiX } from "react-icons/fi";
+import { sanPhamService } from "../../../services/sanPhamService";
 import { tonKhoService } from "../../../services/tonKhoService";
 import type { CuaHang } from "../../../types/cua-hang";
 import type { NhaCungCap } from "../../../types/nha-cung-cap";
@@ -55,17 +56,19 @@ export const CreatePhieuNhapModal = ({
     useState<CreatePhieuNhapRequest>(initialFormData);
 
   const selectedStoreId = formData.maCh || undefined;
-  const { data: tonKhoResponse, isLoading: isTonKhoLoading } = useQuery({
-    queryKey: ["create-phieu-nhap-bien-the", selectedStoreId],
+  const { data: bienTheResponse, isLoading: isBienTheLoading } = useQuery({
+    queryKey: ["create-phieu-nhap-bien-the-public"],
     queryFn: () =>
-      tonKhoService.getTonKhoCuaHang(selectedStoreId!, {
-        page: 0,
+      sanPhamService.getAllBienThe({
+        page: 1,
         size: 1000,
       }),
-    enabled: !!selectedStoreId,
+    enabled: isOpen,
   });
 
-  const bienTheOptions = tonKhoResponse?.data?.content || [];
+  const bienTheOptions = bienTheResponse?.data?.content || [];
+  const isTonKhoLoading = isBienTheLoading;
+
 
   useEffect(() => {
     if (!isOpen) return;

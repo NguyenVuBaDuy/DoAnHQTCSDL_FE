@@ -1,6 +1,6 @@
 import apiClient from "../lib/axios";
 import type { ApiResponse, PageResponse } from "../types/api";
-import type { SanPham, GetSanPhamParams } from "../types/san-pham";
+import type { SanPham, GetSanPhamParams, SanPhamVariant } from "../types/san-pham";
 
 export interface VariantRequest {
   sku: string;
@@ -78,4 +78,22 @@ export const sanPhamService = {
     );
     return data;
   },
+
+  getAllBienThe: async (params?: {
+    search?: string;
+    page?: number;
+    size?: number;
+  }): Promise<ApiResponse<PageResponse<SanPhamVariant>>> => {
+    const { data } = await apiClient.get<
+      ApiResponse<PageResponse<SanPhamVariant>>
+    >("/api/bien-the", {
+      params: {
+        search: params?.search,
+        page: params?.page !== undefined ? params.page : 1,
+        size: params?.size || 10,
+      },
+    });
+    return data;
+  },
 };
+

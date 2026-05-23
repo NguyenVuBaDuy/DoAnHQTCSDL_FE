@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FiSearch,
@@ -21,8 +21,10 @@ import { useAppSelector } from "../../../store";
 import { cuaHangService } from "../../../services/cuaHangService";
 import { tonKhoService } from "../../../services/tonKhoService";
 import { phieuChuyenKhoService } from "../../../services/phieuChuyenKhoService";
+import { sanPhamService } from "../../../services/sanPhamService";
 import type { CuaHang } from "../../../types/cua-hang";
 import type { TonKhoCuaHang } from "../../../types/ton-kho";
+import type { SanPhamVariant } from "../../../types/san-pham";
 import type { ApiResponse, PageResponse } from "../../../types/api";
 import type {
   PhieuChuyenKhoResponse,
@@ -115,16 +117,40 @@ export const PhieuChuyenTab = () => {
     enabled: isCreateOpen, // Only fetch when form is open
   });
 
-  // 3. Fetch Product Variants from the selected SOURCE store
-  const { data: variantsResponse, isLoading: isVariantsLoading } = useQuery<
+  // Fetch Source Store Inventory in full (size: 1000) to know their stock quantities
+  const { data: sourceStoreInventoryResponse } = useQuery<
     ApiResponse<PageResponse<TonKhoCuaHang>>,
     Error
   >({
-    queryKey: ["variants-search-pck", sourceStoreId, debouncedVariantSearch],
+    queryKey: ["source-store-inventory", sourceStoreId],
     queryFn: () =>
       tonKhoService.getTonKhoCuaHang(Number(sourceStoreId), {
-        search: debouncedVariantSearch,
         page: 0,
+        size: 1000,
+      }),
+    enabled: isCreateOpen && !!sourceStoreId,
+  });
+
+  const sourceStoreStockMap = useMemo(() => {
+    const map = new Map<number, number>();
+    if (sourceStoreInventoryResponse?.data?.content) {
+      sourceStoreInventoryResponse.data.content.forEach((item) => {
+        map.set(item.maBienThe, item.soLuong);
+      });
+    }
+    return map;
+  }, [sourceStoreInventoryResponse]);
+
+  // 3. Fetch Product Variants from the public API
+  const { data: variantsResponse, isLoading: isVariantsLoading } = useQuery<
+    ApiResponse<PageResponse<SanPhamVariant>>,
+    Error
+  >({
+    queryKey: ["variants-search-pck-public", debouncedVariantSearch],
+    queryFn: () =>
+      sanPhamService.getAllBienThe({
+        search: debouncedVariantSearch,
+        page: 1,
         size: 50,
       }),
     enabled: isCreateOpen && isVariantDropdownOpen && !!sourceStoreId,
@@ -203,7 +229,25 @@ export const PhieuChuyenTab = () => {
   // ==================== Helper Functions ====================
 
   const stores: CuaHang[] = storesResponse?.data || [];
-  const variants: TonKhoCuaHang[] = variantsResponse?.data?.content || [];
+  const rawVariants: SanPhamVariant[] = variantsResponse?.data?.content || [];
+  const variants: TonKhoCuaHang[] = useMemo(() => {
+    return rawVariants.map((v) => ({
+      maCh: Number(sourceStoreId) || 0,
+      tenCh: "",
+      maBienThe: v.maBienThe,
+      sku: v.sku,
+      barcode: v.barcode,
+      maSp: v.maSp,
+      tenSp: v.tenSp,
+      anhSp: null,
+      mauSac: v.mauSac || null,
+      dungLuong: v.dungLuong || null,
+      kichThuoc: v.kichThuoc || null,
+      giaBan: v.giaBan,
+      soLuong: sourceStoreStockMap.get(v.maBienThe) || 0,
+      trangThaiBienThe: v.trangThai || "",
+    }));
+  }, [rawVariants, sourceStoreId, sourceStoreStockMap]);
   const transfers: PhieuChuyenKhoResponse[] = transfersResponse?.data?.content || [];
   const pageData = transfersResponse?.data;
   const pckDetails: ChiTietChuyenKhoResponse[] = pckDetailsResponse?.data || [];

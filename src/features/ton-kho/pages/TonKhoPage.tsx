@@ -6,13 +6,13 @@ import {
   FiLoader,
   FiBox,
   FiFileText,
-  FiTruck,
 } from "react-icons/fi";
 import { tonKhoService } from "../../../services/tonKhoService";
 import type { GetTonKhoParams } from "../../../types/ton-kho";
 import { ProductSelect } from "../components/ProductSelect";
 import { useAppSelector } from "../../../store";
 import { ChiTietBienTheModal } from "../components/ChiTietBienTheModal";
+import { PhieuChuyenTab } from "../components/PhieuChuyenTab";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const TonKhoPage = () => {
@@ -484,21 +484,7 @@ const TonKhoPage = () => {
         </div>
       )}
 
-      {activeTab === "phieu-chuyen" && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col items-center justify-center p-12 text-center">
-          <div className="p-4 bg-indigo-50 text-indigo-600 rounded-full mb-4">
-            <FiTruck size={48} />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Phiếu chuyển kho
-          </h2>
-          <p className="text-sm text-gray-500 max-w-md">
-            Chức năng quản lý Phiếu chuyển kho giúp luân chuyển hàng hóa giữa
-            các chi nhánh hoặc từ kho tổng về các cửa hàng đại lý. Tính năng này
-            hiện đang được phát triển.
-          </p>
-        </div>
-      )}
+      {activeTab === "phieu-chuyen" && <PhieuChuyenTab />}
 
       {role === "Admin" && (
         <ChiTietBienTheModal

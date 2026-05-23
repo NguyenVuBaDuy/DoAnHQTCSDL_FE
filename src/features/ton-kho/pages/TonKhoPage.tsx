@@ -1,25 +1,35 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import {
-  FiDownload,
-  FiSearch,
-  FiLoader,
   FiBox,
+  FiDownload,
   FiFileText,
+  FiLoader,
+  FiPlus,
+  FiSearch,
   FiTruck,
 } from "react-icons/fi";
+import { phieuNhapService } from "../../../services/phieuNhapService";
 import { tonKhoService } from "../../../services/tonKhoService";
-import type { GetTonKhoParams } from "../../../types/ton-kho";
-import { ProductSelect } from "../components/ProductSelect";
 import { useAppSelector } from "../../../store";
+import type {
+  GetPhieuNhapParams,
+  PhieuNhapResponse,
+} from "../../../types/phieu-nhap";
+import type { GetTonKhoParams } from "../../../types/ton-kho";
+import { useGetCuaHangs } from "../../cua-hang/hooks/useCuaHang";
 import { ChiTietBienTheModal } from "../components/ChiTietBienTheModal";
+import { CreatePhieuNhapModal } from "../components/CreatePhieuNhapModal";
+import { ProductSelect } from "../components/ProductSelect";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const TonKhoPage = () => {
   const [activeTab, setActiveTab] = useState<
     "tong-quan" | "phieu-nhap" | "phieu-chuyen"
   >("tong-quan");
-  const [selectedMaBienThe, setSelectedMaBienThe] = useState<number | null>(null);
+  const [selectedMaBienThe, setSelectedMaBienThe] = useState<number | null>(
+    null,
+  );
 
   const { user } = useAppSelector((state) => state.auth);
   const role = user?.tennhom;
@@ -30,6 +40,12 @@ const TonKhoPage = () => {
     role === "NhanVienKho" ||
     role === "NhanVienBan";
 
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { data: cuaHangsResponse, isLoading: isCuaHangsLoading } =
+    useGetCuaHangs();
+  const cuaHangs = cuaHangsResponse?.data || [];
+  const canCreatePhieuNhap = role === "Admin" || isStoreRole;
+
   const [params, setParams] = useState<GetTonKhoParams>({
     page: 0,
     size: 10,
@@ -37,6 +53,12 @@ const TonKhoPage = () => {
   });
 
   const [searchValue, setSearchValue] = useState("");
+
+  const [phieuNhapParams, setPhieuNhapParams] = useState<GetPhieuNhapParams>({
+    page: 1,
+    size: 10,
+  });
+  const [phieuNhapSearch, setPhieuNhapSearch] = useState("");
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -66,8 +88,20 @@ const TonKhoPage = () => {
       (!isStoreRole || (maCh !== undefined && maCh !== null)),
   });
 
+  const {
+    data: phieuNhapResponse,
+    isLoading: isPhieuNhapLoading,
+    isError: isPhieuNhapError,
+  } = useQuery<any>({
+    queryKey: ["phieu-nhap", phieuNhapParams],
+    queryFn: () => phieuNhapService.getPhieuNhaps(phieuNhapParams),
+    enabled: activeTab === "phieu-nhap",
+  });
+
   const tonKhos = response?.data?.content || [];
   const pageData = response?.data;
+  const phieuNhaps = phieuNhapResponse?.data?.content || [];
+  const phieuNhapPageData = phieuNhapResponse?.data;
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(e.target.value);
@@ -102,9 +136,56 @@ const TonKhoPage = () => {
     );
   };
 
-  // Calculate sum of quantities shown on the current page for an extra stat indicator
+  const getPhieuNhapStatusBadge = (status: string) => {
+    if (status === "DaDuyet") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+          Đã duyệt
+        </span>
+      );
+    }
+    if (status === "ChoDuyet") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
+          Chờ duyệt
+        </span>
+      );
+    }
+    if (status === "DaHuy") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+          Đã hủy
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
+        {status || "Không rõ"}
+      </span>
+    );
+  };
+
+  const filteredPhieuNhaps = phieuNhaps.filter((item: PhieuNhapResponse) => {
+    const query = phieuNhapSearch.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      item.maPn?.toString(),
+      item.tenCh,
+      item.tenNcc,
+      item.tenNv,
+      item.trangThai,
+    ]
+      .filter(Boolean)
+      .some((value) => value!.toString().toLowerCase().includes(query));
+  });
+
   const totalStockOnPage = tonKhos.reduce(
     (acc: number, curr: any) => acc + (curr.tongSoLuong ?? curr.soLuong ?? 0),
+    0,
+  );
+
+  const totalValueOnPage = phieuNhaps.reduce(
+    (acc: number, item: PhieuNhapResponse) => acc + (item.tongTien ?? 0),
     0,
   );
 
@@ -264,7 +345,7 @@ const TonKhoPage = () => {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center">
+                      <td colSpan={9} className="px-6 py-12 text-center">
                         <FiLoader className="animate-spin text-2xl text-blue-500 mx-auto" />
                         <div className="text-sm text-gray-500 mt-2">
                           Đang tải dữ liệu...
@@ -274,7 +355,7 @@ const TonKhoPage = () => {
                   ) : isError ? (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="px-6 py-12 text-center text-red-500 font-medium"
                       >
                         Đã xảy ra lỗi khi tải dữ liệu!
@@ -283,7 +364,7 @@ const TonKhoPage = () => {
                   ) : tonKhos.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="px-6 py-12 text-center text-gray-500"
                       >
                         Không tìm thấy biến thể nào trong kho
@@ -365,6 +446,9 @@ const TonKhoPage = () => {
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-gray-900">
                           {formatCurrency(item.giaBan)}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-900">
+                          {item.soLuong ?? item.tongSoLuong ?? 0}
                         </td>
                         <td className="px-6 py-4 text-center font-semibold">
                           <span
@@ -469,19 +553,244 @@ const TonKhoPage = () => {
       )}
 
       {activeTab === "phieu-nhap" && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col items-center justify-center p-12 text-center">
-          <div className="p-4 bg-blue-50 text-blue-600 rounded-full mb-4">
-            <FiFileText size={48} />
+        <>
+          <div className="flex justify-between items-center shrink-0">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Phiếu nhập hàng
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Quản lý danh sách phiếu nhập hàng và theo dõi trạng thái duyệt.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              {canCreatePhieuNhap && (
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                >
+                  <FiPlus />
+                  Tạo phiếu nhập
+                </button>
+              )}
+              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm">
+                <FiDownload />
+                Xuất Excel
+              </button>
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Phiếu nhập hàng
-          </h2>
-          <p className="text-sm text-gray-500 max-w-md">
-            Chức năng quản lý Phiếu nhập hàng cho phép tạo, duyệt và theo dõi
-            các phiếu nhập hàng từ nhà cung cấp vào hệ thống kho. Tính năng này
-            hiện đang được phát triển.
-          </p>
-        </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                <FiFileText size={24} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-sm font-medium">
+                  Tổng phiếu nhập
+                </span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {phieuNhapPageData?.totalElements || 0}
+                </span>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+              <div className="p-3 bg-green-50 text-green-600 rounded-lg">
+                <FiFileText size={24} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-sm font-medium">
+                  Tổng giá trị trang hiện tại
+                </span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(totalValueOnPage)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="bg-white p-4 rounded-t-xl border border-gray-200 border-b-0 flex gap-4 items-end shrink-0">
+            <div className="flex-1 flex flex-col gap-1.5">
+              <div className="relative">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm theo mã, cửa hàng, nhà cung cấp, nhân viên..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  value={phieuNhapSearch}
+                  onChange={(e) => setPhieuNhapSearch(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Main Table Area */}
+          <div className="bg-white border border-gray-200 rounded-b-xl shadow-sm flex-1 flex flex-col min-h-0">
+            <div className="overflow-auto flex-1 custom-scrollbar">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-500 bg-gray-50 border-b border-gray-200 uppercase sticky top-0 z-10 shadow-sm">
+                  <tr>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Mã PN
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Ngày nhập
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Cửa hàng
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Nhà cung cấp
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Nhân viên
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap text-right">
+                      Tổng tiền
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap text-center">
+                      Trạng thái
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isPhieuNhapLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <FiLoader className="animate-spin text-2xl text-blue-500 mx-auto" />
+                        <div className="text-sm text-gray-500 mt-2">
+                          Đang tải dữ liệu phiếu nhập...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : isPhieuNhapError ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-6 py-12 text-center text-red-500 font-medium"
+                      >
+                        Đã xảy ra lỗi khi tải dữ liệu phiếu nhập!
+                      </td>
+                    </tr>
+                  ) : filteredPhieuNhaps.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-6 py-12 text-center text-gray-500"
+                      >
+                        Không tìm thấy phiếu nhập nào.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPhieuNhaps.map((item: PhieuNhapResponse) => (
+                      <tr
+                        key={item.maPn}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          {item.maPn}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
+                          {item.ngayNhap
+                            ? new Date(item.ngayNhap).toLocaleDateString(
+                                "vi-VN",
+                              )
+                            : "--"}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">
+                          {item.tenCh || "--"}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">
+                          {item.tenNcc || "--"}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">
+                          {item.tenNv || "--"}
+                        </td>
+                        <td className="px-6 py-4 text-right font-medium text-gray-900">
+                          {formatCurrency(item.tongTien ?? 0)}
+                        </td>
+                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                          {getPhieuNhapStatusBadge(item.trangThai || "")}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {!isPhieuNhapLoading && phieuNhapPageData && (
+              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between mt-auto">
+                <span className="text-sm text-gray-500">
+                  Hiển thị{" "}
+                  {phieuNhapPageData.totalElements === 0
+                    ? 0
+                    : (phieuNhapPageData.page - 1) * phieuNhapPageData.size +
+                      1}{" "}
+                  đến{" "}
+                  {Math.min(
+                    phieuNhapPageData.page * phieuNhapPageData.size,
+                    phieuNhapPageData.totalElements,
+                  )}{" "}
+                  trong số {phieuNhapPageData.totalElements} mục
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                    disabled={phieuNhapPageData.page === 1}
+                    onClick={() =>
+                      setPhieuNhapParams({
+                        ...phieuNhapParams,
+                        page: phieuNhapPageData.page - 1,
+                      })
+                    }
+                  >
+                    Trước
+                  </button>
+                  {Array.from({
+                    length: Math.ceil(
+                      phieuNhapPageData.totalElements / phieuNhapPageData.size,
+                    ),
+                  }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      className={`px-3 py-1 rounded-md text-sm font-medium ${phieuNhapPageData.page === idx + 1 ? "bg-blue-50 text-blue-600 border border-transparent" : "text-gray-600 hover:bg-gray-50 border border-transparent"}`}
+                      onClick={() =>
+                        setPhieuNhapParams({
+                          ...phieuNhapParams,
+                          page: idx + 1,
+                        })
+                      }
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                  <button
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                    disabled={
+                      phieuNhapPageData.page >=
+                      Math.ceil(
+                        phieuNhapPageData.totalElements /
+                          phieuNhapPageData.size,
+                      )
+                    }
+                    onClick={() =>
+                      setPhieuNhapParams({
+                        ...phieuNhapParams,
+                        page: phieuNhapPageData.page + 1,
+                      })
+                    }
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {activeTab === "phieu-chuyen" && (
@@ -507,6 +816,16 @@ const TonKhoPage = () => {
           maBienThe={selectedMaBienThe}
         />
       )}
+
+      <CreatePhieuNhapModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => setIsCreateModalOpen(false)}
+        role={role}
+        userStoreId={maCh}
+        cuaHangs={cuaHangs}
+        isCuaHangsLoading={isCuaHangsLoading}
+      />
     </div>
   );
 };

@@ -1,12 +1,34 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FiDownload, FiSearch, FiLoader, FiBox, FiFileText, FiTruck } from "react-icons/fi";
+import {
+  FiDownload,
+  FiSearch,
+  FiLoader,
+  FiBox,
+  FiFileText,
+  FiTruck,
+} from "react-icons/fi";
 import { tonKhoService } from "../../../services/tonKhoService";
-import type { GetTonKhoParams, TonKhoTongQuan } from "../../../types/ton-kho";
+import type { GetTonKhoParams } from "../../../types/ton-kho";
 import { ProductSelect } from "../components/ProductSelect";
+import { useAppSelector } from "../../../store";
+import { ChiTietBienTheModal } from "../components/ChiTietBienTheModal";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const TonKhoPage = () => {
-  const [activeTab, setActiveTab] = useState<"tong-quan" | "phieu-nhap" | "phieu-chuyen">("tong-quan");
+  const [activeTab, setActiveTab] = useState<
+    "tong-quan" | "phieu-nhap" | "phieu-chuyen"
+  >("tong-quan");
+  const [selectedMaBienThe, setSelectedMaBienThe] = useState<number | null>(null);
+
+  const { user } = useAppSelector((state) => state.auth);
+  const role = user?.tennhom;
+  const maCh = user?.nhanvien?.mach;
+
+  const isStoreRole =
+    role === "QuanLyCuaHang" ||
+    role === "NhanVienKho" ||
+    role === "NhanVienBan";
 
   const [params, setParams] = useState<GetTonKhoParams>({
     page: 0,
@@ -27,10 +49,21 @@ const TonKhoPage = () => {
     return () => clearTimeout(handler);
   }, [searchValue]);
 
-  const { data: response, isLoading, isError } = useQuery({
-    queryKey: ["ton-kho-tong-quan", params],
-    queryFn: () => tonKhoService.getTonKhoTongQuan(params),
-    enabled: activeTab === "tong-quan",
+  const {
+    data: response,
+    isLoading,
+    isError,
+  } = useQuery<any>({
+    queryKey: ["ton-kho-tong-quan", params, role, maCh],
+    queryFn: () => {
+      if (isStoreRole && maCh !== undefined && maCh !== null) {
+        return tonKhoService.getTonKhoCuaHang(maCh, params);
+      }
+      return tonKhoService.getTonKhoTongQuan(params);
+    },
+    enabled:
+      activeTab === "tong-quan" &&
+      (!isStoreRole || (maCh !== undefined && maCh !== null)),
   });
 
   const tonKhos = response?.data?.content || [];
@@ -70,15 +103,28 @@ const TonKhoPage = () => {
   };
 
   // Calculate sum of quantities shown on the current page for an extra stat indicator
-  const totalStockOnPage = tonKhos.reduce((acc, curr) => acc + (curr.tongSoLuong || 0), 0);
+  const totalStockOnPage = tonKhos.reduce(
+    (acc: number, curr: any) => acc + (curr.tongSoLuong ?? curr.soLuong ?? 0),
+    0,
+  );
 
   return (
     <div className="flex flex-col gap-6 w-full h-full p-2 overflow-hidden">
       {/* Page Header */}
       <div className="flex justify-between items-center shrink-0">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Quản lý tồn kho
-        </h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Quản lý tồn kho
+          </h1>
+          {isStoreRole && tonKhos.length > 0 && (
+            <p className="text-sm text-gray-500 mt-1">
+              Cửa hàng:{" "}
+              <span className="font-semibold text-gray-700">
+                {(tonKhos[0] as any).tenCh}
+              </span>
+            </p>
+          )}
+        </div>
         {activeTab === "tong-quan" && (
           <div className="flex gap-3">
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm">
@@ -132,7 +178,9 @@ const TonKhoPage = () => {
                 <FiBox size={24} />
               </div>
               <div className="flex flex-col">
-                <span className="text-gray-500 text-sm font-medium">Tổng số biến thể</span>
+                <span className="text-gray-500 text-sm font-medium">
+                  Tổng số biến thể
+                </span>
                 <span className="text-2xl font-bold text-gray-900">
                   {pageData?.totalElements || 0}
                 </span>
@@ -143,7 +191,9 @@ const TonKhoPage = () => {
                 <FiBox size={24} />
               </div>
               <div className="flex flex-col">
-                <span className="text-gray-500 text-sm font-medium">Tồn kho trang hiện tại</span>
+                <span className="text-gray-500 text-sm font-medium">
+                  Tồn kho trang hiện tại
+                </span>
                 <span className="text-2xl font-bold text-gray-900">
                   {totalStockOnPage}
                 </span>
@@ -167,10 +217,14 @@ const TonKhoPage = () => {
             </div>
 
             <div className="flex flex-col gap-1.5 w-64 md:w-80">
-              <label className="text-xs font-medium text-gray-500">Sản phẩm</label>
+              <label className="text-xs font-medium text-gray-500">
+                Sản phẩm
+              </label>
               <ProductSelect
                 selectedId={params.maSp}
-                onChange={(maSp) => setParams((prev) => ({ ...prev, maSp, page: 0 }))}
+                onChange={(maSp) =>
+                  setParams((prev) => ({ ...prev, maSp, page: 0 }))
+                }
               />
             </div>
           </div>
@@ -181,14 +235,30 @@ const TonKhoPage = () => {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-gray-500 bg-gray-50 border-b border-gray-200 uppercase sticky top-0 z-10 shadow-sm">
                   <tr>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap">Ảnh</th>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap min-w-[200px]">Tên sản phẩm</th>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap">SKU</th>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap">Barcode</th>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap">Thuộc tính</th>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap text-right">Giá bán</th>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap text-center">Tổng tồn kho</th>
-                    <th className="px-6 py-4 font-medium whitespace-nowrap text-center">Trạng thái</th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Ảnh
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap min-w-[200px]">
+                      Tên sản phẩm
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      SKU
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Barcode
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap">
+                      Thuộc tính
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap text-right">
+                      Giá bán
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap text-center">
+                      {isStoreRole ? "Số lượng tồn" : "Tổng tồn kho"}
+                    </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap text-center">
+                      Trạng thái
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,24 +266,44 @@ const TonKhoPage = () => {
                     <tr>
                       <td colSpan={8} className="px-6 py-12 text-center">
                         <FiLoader className="animate-spin text-2xl text-blue-500 mx-auto" />
-                        <div className="text-sm text-gray-500 mt-2">Đang tải dữ liệu...</div>
+                        <div className="text-sm text-gray-500 mt-2">
+                          Đang tải dữ liệu...
+                        </div>
                       </td>
                     </tr>
                   ) : isError ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center text-red-500 font-medium">
+                      <td
+                        colSpan={8}
+                        className="px-6 py-12 text-center text-red-500 font-medium"
+                      >
                         Đã xảy ra lỗi khi tải dữ liệu!
                       </td>
                     </tr>
                   ) : tonKhos.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                      <td
+                        colSpan={8}
+                        className="px-6 py-12 text-center text-gray-500"
+                      >
                         Không tìm thấy biến thể nào trong kho
                       </td>
                     </tr>
                   ) : (
-                    tonKhos.map((item: TonKhoTongQuan) => (
-                      <tr key={item.maBienThe} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    tonKhos.map((item: any) => (
+                      <tr
+                        key={item.maBienThe}
+                        className={`border-b border-gray-100 transition-colors ${
+                          role === "Admin"
+                            ? "cursor-pointer hover:bg-blue-50/50"
+                            : "hover:bg-gray-50"
+                        }`}
+                        onClick={() => {
+                          if (role === "Admin") {
+                            setSelectedMaBienThe(item.maBienThe);
+                          }
+                        }}
+                      >
                         <td className="px-6 py-4">
                           <div className="w-12 h-12 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center overflow-hidden">
                             {item.anhSp ? (
@@ -231,29 +321,46 @@ const TonKhoPage = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{item.tenSp}</div>
-                          <div className="text-xs text-gray-500 mt-1">Mã SP: {item.maSp}</div>
+                          <div className="font-medium text-gray-900">
+                            {item.tenSp}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Mã SP: {item.maSp}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 font-mono text-xs text-gray-700">{item.sku}</td>
-                        <td className="px-6 py-4 font-mono text-xs text-gray-700">{item.barcode}</td>
+                        <td className="px-6 py-4 font-mono text-xs text-gray-700">
+                          {item.sku}
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs text-gray-700">
+                          {item.barcode}
+                        </td>
                         <td className="px-6 py-4 text-xs text-gray-600">
                           <div className="flex flex-col gap-0.5">
                             {item.mauSac && (
                               <div>
-                                <span className="text-gray-400">Màu:</span> {item.mauSac}
+                                <span className="text-gray-400">Màu:</span>{" "}
+                                {item.mauSac}
                               </div>
                             )}
                             {item.dungLuong && (
                               <div>
-                                <span className="text-gray-400">Dung lượng:</span> {item.dungLuong}
+                                <span className="text-gray-400">
+                                  Dung lượng:
+                                </span>{" "}
+                                {item.dungLuong}
                               </div>
                             )}
                             {item.kichThuoc && (
                               <div>
-                                <span className="text-gray-400">Kích thước:</span> {item.kichThuoc}
+                                <span className="text-gray-400">
+                                  Kích thước:
+                                </span>{" "}
+                                {item.kichThuoc}
                               </div>
                             )}
-                            {!item.mauSac && !item.dungLuong && !item.kichThuoc && <span>---</span>}
+                            {!item.mauSac &&
+                              !item.dungLuong &&
+                              !item.kichThuoc && <span>---</span>}
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-gray-900">
@@ -262,14 +369,14 @@ const TonKhoPage = () => {
                         <td className="px-6 py-4 text-center font-semibold">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${
-                              item.tongSoLuong > 5
+                              (item.tongSoLuong ?? item.soLuong) > 5
                                 ? "text-gray-800 bg-gray-100"
-                                : item.tongSoLuong > 0
-                                ? "text-yellow-800 bg-yellow-100"
-                                : "text-red-800 bg-red-100"
+                                : (item.tongSoLuong ?? item.soLuong) > 0
+                                  ? "text-yellow-800 bg-yellow-100"
+                                  : "text-red-800 bg-red-100"
                             }`}
                           >
-                            {item.tongSoLuong}
+                            {item.tongSoLuong ?? item.soLuong}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center whitespace-nowrap">
@@ -286,51 +393,71 @@ const TonKhoPage = () => {
             {!isLoading && pageData && (
               <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between mt-auto">
                 <span className="text-sm text-gray-500">
-                  Hiển thị {pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1} đến{" "}
-                  {Math.min((pageData.page + 1) * pageData.size, pageData.totalElements)} trong số{" "}
-                  {pageData.totalElements} mục
+                  Hiển thị{" "}
+                  {pageData.totalElements === 0
+                    ? 0
+                    : pageData.page * pageData.size + 1}{" "}
+                  đến{" "}
+                  {Math.min(
+                    (pageData.page + 1) * pageData.size,
+                    pageData.totalElements,
+                  )}{" "}
+                  trong số {pageData.totalElements} mục
                 </span>
                 <div className="flex gap-1">
                   <button
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                     disabled={pageData.page === 0}
-                    onClick={() => setParams({ ...params, page: pageData.page - 1 })}
+                    onClick={() =>
+                      setParams({ ...params, page: pageData.page - 1 })
+                    }
                   >
                     Trước
                   </button>
 
-                  {Array.from({ length: Math.ceil(pageData.totalElements / pageData.size) }).map(
-                    (_, idx) => {
-                      const totalPages = Math.ceil(pageData.totalElements / pageData.size);
-                      if (idx === 0 || idx === totalPages - 1 || Math.abs(idx - pageData.page) <= 1) {
-                        return (
-                          <button
-                            key={idx}
-                            className={`px-3 py-1 rounded-md text-sm font-medium ${
-                              pageData.page === idx
-                                ? "bg-blue-50 text-blue-600 border border-transparent"
-                                : "text-gray-600 hover:bg-gray-50 border border-transparent"
-                            }`}
-                            onClick={() => setParams({ ...params, page: idx })}
-                          >
-                            {idx + 1}
-                          </button>
-                        );
-                      } else if (Math.abs(idx - pageData.page) === 2) {
-                        return (
-                          <span key={idx} className="px-3 py-1 text-gray-500">
-                            ...
-                          </span>
-                        );
-                      }
-                      return null;
+                  {Array.from({
+                    length: Math.ceil(pageData.totalElements / pageData.size),
+                  }).map((_, idx) => {
+                    const totalPages = Math.ceil(
+                      pageData.totalElements / pageData.size,
+                    );
+                    if (
+                      idx === 0 ||
+                      idx === totalPages - 1 ||
+                      Math.abs(idx - pageData.page) <= 1
+                    ) {
+                      return (
+                        <button
+                          key={idx}
+                          className={`px-3 py-1 rounded-md text-sm font-medium ${
+                            pageData.page === idx
+                              ? "bg-blue-50 text-blue-600 border border-transparent"
+                              : "text-gray-600 hover:bg-gray-50 border border-transparent"
+                          }`}
+                          onClick={() => setParams({ ...params, page: idx })}
+                        >
+                          {idx + 1}
+                        </button>
+                      );
+                    } else if (Math.abs(idx - pageData.page) === 2) {
+                      return (
+                        <span key={idx} className="px-3 py-1 text-gray-500">
+                          ...
+                        </span>
+                      );
                     }
-                  )}
+                    return null;
+                  })}
 
                   <button
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                    disabled={pageData.page >= Math.ceil(pageData.totalElements / pageData.size) - 1}
-                    onClick={() => setParams({ ...params, page: pageData.page + 1 })}
+                    disabled={
+                      pageData.page >=
+                      Math.ceil(pageData.totalElements / pageData.size) - 1
+                    }
+                    onClick={() =>
+                      setParams({ ...params, page: pageData.page + 1 })
+                    }
                   >
                     Sau
                   </button>
@@ -346,9 +473,13 @@ const TonKhoPage = () => {
           <div className="p-4 bg-blue-50 text-blue-600 rounded-full mb-4">
             <FiFileText size={48} />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Phiếu nhập hàng</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Phiếu nhập hàng
+          </h2>
           <p className="text-sm text-gray-500 max-w-md">
-            Chức năng quản lý Phiếu nhập hàng cho phép tạo, duyệt và theo dõi các phiếu nhập hàng từ nhà cung cấp vào hệ thống kho. Tính năng này hiện đang được phát triển.
+            Chức năng quản lý Phiếu nhập hàng cho phép tạo, duyệt và theo dõi
+            các phiếu nhập hàng từ nhà cung cấp vào hệ thống kho. Tính năng này
+            hiện đang được phát triển.
           </p>
         </div>
       )}
@@ -358,11 +489,23 @@ const TonKhoPage = () => {
           <div className="p-4 bg-indigo-50 text-indigo-600 rounded-full mb-4">
             <FiTruck size={48} />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Phiếu chuyển kho</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Phiếu chuyển kho
+          </h2>
           <p className="text-sm text-gray-500 max-w-md">
-            Chức năng quản lý Phiếu chuyển kho giúp luân chuyển hàng hóa giữa các chi nhánh hoặc từ kho tổng về các cửa hàng đại lý. Tính năng này hiện đang được phát triển.
+            Chức năng quản lý Phiếu chuyển kho giúp luân chuyển hàng hóa giữa
+            các chi nhánh hoặc từ kho tổng về các cửa hàng đại lý. Tính năng này
+            hiện đang được phát triển.
           </p>
         </div>
+      )}
+
+      {role === "Admin" && (
+        <ChiTietBienTheModal
+          isOpen={selectedMaBienThe !== null}
+          onClose={() => setSelectedMaBienThe(null)}
+          maBienThe={selectedMaBienThe}
+        />
       )}
     </div>
   );

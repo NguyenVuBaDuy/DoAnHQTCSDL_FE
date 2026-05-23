@@ -1,6 +1,11 @@
 import apiClient from "../lib/axios";
 import type { ApiResponse, PageResponse } from "../types/api";
-import type { TonKhoTongQuan, GetTonKhoParams } from "../types/ton-kho";
+import type {
+  TonKhoTongQuan,
+  TonKhoCuaHang,
+  GetTonKhoParams,
+  ChiTietBienTheResponse,
+} from "../types/ton-kho";
 
 export const tonKhoService = {
   getTonKhoTongQuan: async (
@@ -13,4 +18,26 @@ export const tonKhoService = {
     });
     return data;
   },
+
+  getTonKhoCuaHang: async (
+    maCh: number,
+    params: GetTonKhoParams,
+  ): Promise<ApiResponse<PageResponse<TonKhoCuaHang>>> => {
+    const { data } = await apiClient.get<
+      ApiResponse<PageResponse<TonKhoCuaHang>>
+    >(`/ton-kho/cua-hang/${maCh}`, {
+      params,
+    });
+    return data;
+  },
+
+  getChiTietBienThe: async (
+    maBienThe: number,
+  ): Promise<ApiResponse<ChiTietBienTheResponse>> => {
+    const { data } = await apiClient.get<ApiResponse<ChiTietBienTheResponse>>(
+      `/ton-kho/bien-the/${maBienThe}`,
+    );
+    return data;
+  },
 };
+

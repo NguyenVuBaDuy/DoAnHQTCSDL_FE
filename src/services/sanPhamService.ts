@@ -64,4 +64,18 @@ export const sanPhamService = {
     );
     return data;
   },
+
+  updateTrangThai: async (
+    maSp: number,
+    trangThai: string,
+  ): Promise<ApiResponse<SanPham>> => {
+    const { data } = await apiClient.patch<ApiResponse<SanPham>>(
+      `/admin/san-pham/${maSp}/trang-thai`,
+      null,
+      {
+        params: { trangThai },
+      },
+    );
+    return data;
+  },
 };

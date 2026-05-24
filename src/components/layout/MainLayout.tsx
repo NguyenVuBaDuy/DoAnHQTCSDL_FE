@@ -12,7 +12,7 @@ const MainLayout = () => {
       <Header />
 
       {/* Main Content Area */}
-      <main className="ml-[220px] mt-12 h-[calc(100vh-48px)] overflow-auto relative z-0">
+      <main className="ml-[220px] mt-12 h-[calc(100vh-48px)] overflow-auto relative">
         <div className="p-6 space-y-6 min-h-full">
           <Outlet />
         </div>

@@ -17,6 +17,8 @@ import { CuaHangModal } from "../components/CuaHangModal";
 import SuccessModal from "../../../components/common/SuccessModal";
 import CuaHangDetailDrawer from "../components/CuaHangDetailDrawer";
 import type { CuaHang } from "../../../types/cua-hang";
+import { ExportExcelModal } from "../../../components/common/ExportExcelModal";
+import type { ExcelColumn } from "../../../utils/excelUtils";
 
 const CuaHangPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,6 +27,7 @@ const CuaHangPage = () => {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedCuaHang, setSelectedCuaHang] = useState<CuaHang | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const { data: cuaHangsResponse, isLoading, isError } = useGetCuaHangs();
   const cuaHangs = useMemo(
@@ -96,6 +99,32 @@ const CuaHangPage = () => {
     }
   };
 
+  const excelColumns: ExcelColumn<CuaHang>[] = useMemo(
+    () => [
+      { header: "Mã Cửa Hàng", key: "maCh" },
+      { header: "Tên Cửa Hàng", key: "tenCh" },
+      { header: "Số Điện Thoại", key: "sdt" },
+      { header: "Email", key: "email" },
+      { header: "Địa Chỉ", key: "diaChi" },
+      {
+        header: "Ngày Khai Trương",
+        key: "ngayKhaiTruong",
+        transform: (val) => formatDate(val),
+      },
+      {
+        header: "Trạng Thái",
+        key: "trangThai",
+        transform: (val) => {
+          if (val === "HoatDong") return "Hoạt động";
+          if (val === "TamNgung") return "Tạm ngưng";
+          if (val === "DongCua" || val === "KhoaCung") return "Đóng cửa";
+          return val || "Hoạt động";
+        },
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="flex flex-col gap-6 w-full h-full p-2">
       {/* Page Header */}
@@ -104,7 +133,10 @@ const CuaHangPage = () => {
           Quản lý cửa hàng
         </h1>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm">
+          <button 
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm"
+          >
             <FiDownload />
             Xuất Excel
           </button>
@@ -298,6 +330,15 @@ const CuaHangPage = () => {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         cuaHang={selectedCuaHang}
+      />
+
+      <ExportExcelModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        data={filteredCuaHangs}
+        columns={excelColumns}
+        defaultFileName="Danh_Sach_Cua_Hang"
+        sheetName="Cửa Hàng"
       />
     </div>
   );

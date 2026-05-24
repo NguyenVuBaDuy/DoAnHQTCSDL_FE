@@ -7,6 +7,7 @@ import {
   HiOutlineArchiveBox,
   HiOutlineDocumentText,
   HiOutlineUserGroup,
+  HiOutlineBuildingOffice2,
   HiOutlineTicket,
   HiOutlineChartBar,
   HiOutlineCog6Tooth,
@@ -22,6 +23,7 @@ const mainNavItems = [
   { to: "/inventory", label: "Tồn kho", icon: HiOutlineArchiveBox },
   { to: "/invoices", label: "Hóa đơn", icon: HiOutlineDocumentText },
   { to: "/customers", label: "Khách hàng", icon: HiOutlineUserGroup },
+  { to: "/suppliers", label: "Nhà cung cấp", icon: HiOutlineBuildingOffice2 },
   { to: "/vouchers", label: "Voucher", icon: HiOutlineTicket },
   { to: "/reports", label: "Báo cáo", icon: HiOutlineChartBar },
 ];
@@ -61,6 +63,9 @@ const Sidebar = () => {
               return role !== "NhanVienBan" && role !== "NhanVienKho";
             }
             if (item.to === "/customers") {
+              return role === "Admin";
+            }
+            if (item.to === "/suppliers") {
               return role === "Admin";
             }
             return true;

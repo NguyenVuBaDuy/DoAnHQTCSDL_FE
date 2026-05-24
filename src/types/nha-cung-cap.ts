@@ -7,3 +7,5 @@ export interface NhaCungCap {
   maSoThue?: string;
   trangThai?: string;
 }
+
+export type CreateNhaCungCapRequest = Omit<NhaCungCap, "maNcc">;

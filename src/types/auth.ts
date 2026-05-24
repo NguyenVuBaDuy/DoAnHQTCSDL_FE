@@ -41,6 +41,15 @@ export interface LoginError {
 
 // ==================== GetMe ====================
 
+export interface CuaHangInfo {
+  mach: number;
+  tench: string;
+  diachi: string;
+  sdt: string;
+  email: string;
+  trangthai: string;
+}
+
 export interface NhanVien {
   hoten: string;
   chucvu: string;
@@ -49,6 +58,7 @@ export interface NhanVien {
   diachi: string;
   ngaysinh: string;
   gioitinh: string;
+  cuahang?: CuaHangInfo;
 }
 
 export interface GetMeData {

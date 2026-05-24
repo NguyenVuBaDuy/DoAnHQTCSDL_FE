@@ -10,6 +10,7 @@ import { SanPhamPage, SanPhamCreatePage, SanPhamUpdatePage, SanPhamDetailPage } 
 import { TonKhoPage } from './features/ton-kho'
 import { HoaDonPage } from './features/hoa-don'
 import { KhachHangPage } from './features/khach-hang'
+import { NhaCungCapPage } from './features/nha-cung-cap'
 import { VoucherPage } from './features/voucher'
 import { BaoCaoPage } from './features/bao-cao'
 import { CaiDatPage } from './features/cai-dat'
@@ -53,6 +54,7 @@ function App() {
             <Route element={<MainLayout />}>
               <Route path="/stores" element={<CuaHangPage />} />
               <Route path="/customers" element={<KhachHangPage />} />
+              <Route path="/suppliers" element={<NhaCungCapPage />} />
             </Route>
           </Route>
           {/* Standard protected routes with layout */}

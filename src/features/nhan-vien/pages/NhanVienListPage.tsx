@@ -260,7 +260,6 @@ const NhanVienListPage = () => {
               <tr>
                 <th className="px-6 py-4 font-medium">Mã NV</th>
                 <th className="px-6 py-4 font-medium">Họ tên</th>
-                <th className="px-6 py-4 font-medium">CCCD</th>
                 <th className="px-6 py-4 font-medium">Cửa hàng</th>
                 <th className="px-6 py-4 font-medium">Chức vụ</th>
                 <th className="px-6 py-4 font-medium">Số điện thoại</th>
@@ -272,7 +271,7 @@ const NhanVienListPage = () => {
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Đang tải dữ liệu...
@@ -281,7 +280,7 @@ const NhanVienListPage = () => {
               ) : isError ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-6 py-8 text-center text-red-500"
                   >
                     Đã xảy ra lỗi khi tải dữ liệu!
@@ -290,7 +289,7 @@ const NhanVienListPage = () => {
               ) : nhanViens.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không tìm thấy nhân viên nào.
@@ -308,7 +307,6 @@ const NhanVienListPage = () => {
                     <td className="px-6 py-4 font-medium text-gray-900">
                       {row.hoTen}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{row.cccd}</td>
                     <td className="px-6 py-4 text-gray-900">{row.tenCh}</td>
                     <td className="px-6 py-4 text-gray-600">
                       {getRoleName(row.chucVu, row.chucVu)}

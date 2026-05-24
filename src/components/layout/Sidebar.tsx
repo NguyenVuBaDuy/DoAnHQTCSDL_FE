@@ -42,7 +42,7 @@ const Sidebar = () => {
       <div className="px-0 pb-8">
         <div className="px-6">
           <h1 className="text-xl font-bold leading-7 tracking-tight text-[#0057AD]">
-            ElectroChain
+            TechStore
           </h1>
           <p className="text-[13px] leading-[18px] text-[#414753]">
             Hệ thống quản lý

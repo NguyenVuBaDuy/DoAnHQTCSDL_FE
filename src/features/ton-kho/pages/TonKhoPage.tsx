@@ -345,7 +345,7 @@ const TonKhoPage = () => {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={9} className="px-6 py-12 text-center">
+                      <td colSpan={8} className="px-6 py-12 text-center">
                         <FiLoader className="animate-spin text-2xl text-blue-500 mx-auto" />
                         <div className="text-sm text-gray-500 mt-2">
                           Đang tải dữ liệu...
@@ -355,7 +355,7 @@ const TonKhoPage = () => {
                   ) : isError ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={8}
                         className="px-6 py-12 text-center text-red-500 font-medium"
                       >
                         Đã xảy ra lỗi khi tải dữ liệu!
@@ -364,7 +364,7 @@ const TonKhoPage = () => {
                   ) : tonKhos.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={8}
                         className="px-6 py-12 text-center text-gray-500"
                       >
                         Không tìm thấy biến thể nào trong kho
@@ -446,9 +446,6 @@ const TonKhoPage = () => {
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-gray-900">
                           {formatCurrency(item.giaBan)}
-                        </td>
-                        <td className="px-6 py-4 text-center text-gray-900">
-                          {item.soLuong ?? item.tongSoLuong ?? 0}
                         </td>
                         <td className="px-6 py-4 text-center font-semibold">
                           <span

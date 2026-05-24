@@ -620,7 +620,7 @@ const HoaDonPage = () => {
       {activeTab === "pos" ? (
         <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-h-0">
           {/* Left Side: Category Sidebar & Product Catalog Grid */}
-          <div className="w-full lg:w-[60%] bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+          <div className="w-full lg:w-[70%] bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
             {/* Products Search Header */}
             <div className="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50 shrink-0">
               <div className="relative flex-1">
@@ -752,7 +752,7 @@ const HoaDonPage = () => {
                           >
                             <div className="space-y-2">
                               {/* Product Image */}
-                              <div className="w-full h-28 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-100 shrink-0">
+                              <div className="w-full aspect-square bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-100 shrink-0">
                                 {p.anh ? (
                                   <img
                                     src={p.anh}
@@ -843,7 +843,7 @@ const HoaDonPage = () => {
           </div>
 
           {/* Right Side: Checkout Summary & Action Panel */}
-          <div className="w-full lg:w-[40%] bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden min-h-0">
+          <div className="w-full lg:w-[30%] bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden min-h-0">
             {/* Panel Title */}
             <div className="p-4 border-b border-gray-100 flex items-center gap-2 bg-gray-50 shrink-0">
               <FiShoppingBag className="text-blue-600" size={18} />

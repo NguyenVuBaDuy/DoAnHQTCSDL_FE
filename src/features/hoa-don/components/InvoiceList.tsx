@@ -53,7 +53,9 @@ export const InvoiceList = () => {
   const deferredSearch = useDeferredValue(searchTerm);
 
   // Detail Modal
-  const [selectedInvoice, setSelectedInvoice] = useState<HoaDonResponse | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<HoaDonResponse | null>(
+    null,
+  );
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Actions state
@@ -128,9 +130,13 @@ export const InvoiceList = () => {
       const matchCustomer = inv.tenKh?.toLowerCase().includes(search);
       const matchPhone = inv.sdtKh?.includes(search);
       const matchVoucher = inv.maVoucher?.toLowerCase().includes(search);
-      const matchCashier = inv.tenNv?.toLowerCase().includes(search) || inv.maNv?.toLowerCase().includes(search);
+      const matchCashier =
+        inv.tenNv?.toLowerCase().includes(search) ||
+        inv.maNv?.toLowerCase().includes(search);
 
-      return matchId || matchCustomer || matchPhone || matchVoucher || matchCashier;
+      return (
+        matchId || matchCustomer || matchPhone || matchVoucher || matchCashier
+      );
     }
 
     return true;
@@ -143,7 +149,7 @@ export const InvoiceList = () => {
 
   const handleCancelInvoice = async (maHd: number) => {
     const confirm = window.confirm(
-      "Bạn có chắc chắn muốn HỦY hóa đơn này? Thao tác này sẽ tự động khôi phục số lượng tồn kho."
+      "Bạn có chắc chắn muốn HỦY hóa đơn này? Thao tác này sẽ tự động khôi phục số lượng tồn kho.",
     );
     if (!confirm) return;
 
@@ -202,7 +208,12 @@ export const InvoiceList = () => {
     revenue: filteredInvoices
       .filter((i) => i.trangThai === "DaThanhToan" || i.trangThai === "Paid")
       .reduce((sum, item) => sum + item.tongTien, 0),
-    cancelled: filteredInvoices.filter((i) => i.trangThai === "Huy" || i.trangThai === "DaHuy" || i.trangThai === "Cancelled").length,
+    cancelled: filteredInvoices.filter(
+      (i) =>
+        i.trangThai === "Huy" ||
+        i.trangThai === "DaHuy" ||
+        i.trangThai === "Cancelled",
+    ).length,
   };
 
   return (
@@ -214,8 +225,12 @@ export const InvoiceList = () => {
             <FiActivity className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-gray-500 block">Số lượng đơn hàng hiển thị</span>
-            <span className="text-xl font-bold text-gray-900 leading-tight">{invoiceStats.total} đơn</span>
+            <span className="text-xs font-semibold text-gray-500 block">
+              Số lượng đơn hàng hiển thị
+            </span>
+            <span className="text-xl font-bold text-gray-900 leading-tight">
+              {invoiceStats.total} đơn
+            </span>
           </div>
         </div>
 
@@ -224,7 +239,9 @@ export const InvoiceList = () => {
             <span className="text-xl font-black">₫</span>
           </div>
           <div>
-            <span className="text-xs font-semibold text-gray-500 block">Doanh thu đã thanh toán</span>
+            <span className="text-xs font-semibold text-gray-500 block">
+              Doanh thu đã thanh toán
+            </span>
             <span className="text-xl font-bold text-green-600 leading-tight">
               {formatCurrency(invoiceStats.revenue)}
             </span>
@@ -236,7 +253,9 @@ export const InvoiceList = () => {
             <FiTrash2 className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-gray-500 block">Số đơn đã hủy bỏ</span>
+            <span className="text-xs font-semibold text-gray-500 block">
+              Số đơn đã hủy bỏ
+            </span>
             <span className="text-xl font-bold text-red-600 leading-tight">
               {invoiceStats.cancelled} đơn
             </span>
@@ -283,7 +302,9 @@ export const InvoiceList = () => {
             <select
               value={selectedStoreId}
               onChange={(e) =>
-                setSelectedStoreId(e.target.value === "" ? "" : Number(e.target.value))
+                setSelectedStoreId(
+                  e.target.value === "" ? "" : Number(e.target.value),
+                )
               }
               className="px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
@@ -331,16 +352,21 @@ export const InvoiceList = () => {
           {isLoading ? (
             <div className="h-64 flex flex-col items-center justify-center text-gray-400 gap-2">
               <FiLoader className="w-8 h-8 animate-spin text-blue-500" />
-              <span className="text-sm font-semibold text-gray-700">Đang tải danh sách hóa đơn...</span>
+              <span className="text-sm font-semibold text-gray-700">
+                Đang tải danh sách hóa đơn...
+              </span>
             </div>
           ) : filteredInvoices.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center text-gray-400 p-8 text-center">
               <div className="p-4 bg-gray-50 rounded-full mb-3 border">
                 <FiGrid size={24} />
               </div>
-              <span className="text-sm font-semibold text-gray-700">Không tìm thấy hóa đơn nào</span>
+              <span className="text-sm font-semibold text-gray-700">
+                Không tìm thấy hóa đơn nào
+              </span>
               <span className="text-xs text-gray-500 max-w-xs mt-1">
-                Không tìm thấy kết quả hóa đơn phù hợp với điều kiện lọc hiện tại.
+                Không tìm thấy kết quả hóa đơn phù hợp với điều kiện lọc hiện
+                tại.
               </span>
             </div>
           ) : (
@@ -360,7 +386,10 @@ export const InvoiceList = () => {
               </thead>
               <tbody className="divide-y divide-gray-150">
                 {filteredInvoices.map((inv) => {
-                  const isHuy = inv.trangThai === "Huy" || inv.trangThai === "DaHuy" || inv.trangThai === "Cancelled";
+                  const isHuy =
+                    inv.trangThai === "Huy" ||
+                    inv.trangThai === "DaHuy" ||
+                    inv.trangThai === "Cancelled";
                   return (
                     <tr
                       key={inv.maHd}
@@ -376,18 +405,26 @@ export const InvoiceList = () => {
                       <td className="p-4">
                         {inv.maKh ? (
                           <div>
-                            <span className="font-semibold text-gray-800 block text-xs">{inv.tenKh}</span>
-                            <span className="text-[10px] text-gray-400 block mt-0.5">{inv.sdtKh}</span>
+                            <span className="font-semibold text-gray-800 block text-xs">
+                              {inv.tenKh}
+                            </span>
+                            <span className="text-[10px] text-gray-400 block mt-0.5">
+                              {inv.sdtKh}
+                            </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-xs">Khách vãng lai</span>
+                          <span className="text-gray-400 text-xs">
+                            Khách vãng lai
+                          </span>
                         )}
                       </td>
                       <td className="p-4 text-right font-extrabold text-blue-600">
                         {formatCurrency(inv.tongTien)}
                       </td>
                       <td className="p-4 font-medium text-gray-600">
-                        {inv.phuongThucThanhToan === "TienMat" ? "Tiền mặt" : "Chuyển khoản"}
+                        {inv.phuongThucThanhToan === "TienMat"
+                          ? "Tiền mặt"
+                          : "Chuyển khoản"}
                       </td>
                       <td className="p-4 text-gray-600 font-medium whitespace-nowrap">
                         <span className="flex items-center gap-1">
@@ -406,9 +443,7 @@ export const InvoiceList = () => {
                           {inv.loaiHd === "TaiQuay" ? "Tại quầy" : "Online"}
                         </span>
                       </td>
-                      <td className="p-4">
-                        {getStatusBadge(inv.trangThai)}
-                      </td>
+                      <td className="p-4">{getStatusBadge(inv.trangThai)}</td>
                       <td
                         className="p-4 text-center"
                         onClick={(e) => e.stopPropagation()} // Stop row propagation for actions

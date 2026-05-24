@@ -73,8 +73,16 @@ export const thongKeService = {
     return data;
   },
 
-  getDoanhThuTheoCuaHang: async (): Promise<ApiResponse<DoanhThuTheoCuaHangResponse[]>> => {
-    const { data } = await apiClient.get<ApiResponse<DoanhThuTheoCuaHangResponse[]>>("/api/thong-ke/cua-hang");
+  getDoanhThuTheoCuaHang: async (params?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<DoanhThuTheoCuaHangResponse[]>> => {
+    const { data } = await apiClient.get<ApiResponse<DoanhThuTheoCuaHangResponse[]>>("/api/thong-ke/cua-hang", {
+      params: {
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+      },
+    });
     return data;
   },
 };

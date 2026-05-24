@@ -15,19 +15,30 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiUserPlus,
-  FiAlertCircle
+  FiAlertCircle,
+  FiGrid,
+  FiSmartphone,
+  FiMonitor,
+  FiHeadphones,
+  FiWatch,
+  FiHome
 } from "react-icons/fi";
+import { HiOutlineBuildingStorefront } from "react-icons/hi2";
 import { useAppSelector } from "../../../store";
 import { tonKhoService } from "../../../services/tonKhoService";
 import { cuaHangService } from "../../../services/cuaHangService";
 import { khachHangService } from "../../../services/khachHangService";
 import { voucherService } from "../../../services/voucherService";
 import { hoaDonService } from "../../../services/hoaDonService";
+import { danhMucService } from "../../../services/danhMucService";
+import { sanPhamService } from "../../../services/sanPhamService";
 import type { CuaHang } from "../../../types/cua-hang";
 import type { KhachHang } from "../../../types/khach-hang";
-import type { TonKhoCuaHang } from "../../../types/ton-kho";
+import type { DanhMuc } from "../../../types/danh-muc";
+import type { SanPham, SanPhamVariant } from "../../../types/san-pham";
 import type { VoucherResponse } from "../../../services/voucherService";
 import { CreateCustomerModal } from "../components/CreateCustomerModal";
+import { VariantSelectModal } from "../components/VariantSelectModal";
 
 interface CartItem {
   maBienThe: number;
@@ -42,6 +53,14 @@ interface CartItem {
   giamGia: number; // Manual line item discount
 }
 
+const iconMap: Record<number, React.ElementType> = {
+  1: FiSmartphone,
+  2: FiHeadphones,
+  3: FiMonitor,
+  4: FiHome,
+  5: FiWatch,
+};
+
 const formatCurrency = (val: number) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -54,15 +73,24 @@ const HoaDonPage = () => {
   const { user } = useAppSelector((state) => state.auth);
   const role = user?.tennhom || user?.nhanvien?.chucvu;
   const isAdmin = role === "Admin";
-  const userStoreId = user?.mach || user?.nhanvien?.mach;
+  const userStoreId = user?.nhanvien?.mach;
 
   // Stores selection
   const [stores, setStores] = useState<CuaHang[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<number>(0);
   const [isLoadingStores, setIsLoadingStores] = useState(false);
 
-  // Products stock
-  const [products, setProducts] = useState<TonKhoCuaHang[]>([]);
+  // Store's active stock map (variantId -> quantity)
+  const [stockMap, setStockMap] = useState<Record<number, number>>({});
+  const [productStockMap, setProductStockMap] = useState<Record<number, number>>({});
+
+  // Categories sidebar list
+  const [categories, setCategories] = useState<DanhMuc[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+  // Products grid list
+  const [products, setProducts] = useState<SanPham[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearch = useDeferredValue(searchTerm);
   const [page, setPage] = useState(0);
@@ -91,10 +119,11 @@ const HoaDonPage = () => {
   const [tienKhachDua, setTienKhachDua] = useState<number | "">("");
 
   // Modals / Statuses
+  const [selectedProductForVariant, setSelectedProductForVariant] = useState<SanPham | null>(null);
   const [isCreateCustomerOpen, setIsCreateCustomerOpen] = useState(false);
   const [isCheckoutPending, setIsCheckoutPending] = useState(false);
 
-  // Fetch stores if Admin
+  // Fetch stores & categories
   useEffect(() => {
     const fetchStores = async () => {
       setIsLoadingStores(true);
@@ -115,43 +144,87 @@ const HoaDonPage = () => {
       }
     };
 
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const res = await danhMucService.getCategoryTree();
+        if (res.success && res.data) {
+          setCategories(res.data);
+        }
+      } catch (err) {
+        console.error("Error loading categories tree:", err);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
     if (isAdmin) {
       fetchStores();
     } else if (userStoreId) {
       setSelectedStoreId(userStoreId);
     }
+    fetchCategories();
   }, [isAdmin, userStoreId]);
 
-  // Load products in store when store or search changes
-  useEffect(() => {
-    if (!selectedStoreId) return;
+  // Load stock map of selected store (Fetch size: 500 to catch everything)
+  const fetchStoreStockMap = async (storeId: number) => {
+    try {
+      const res = await tonKhoService.getTonKhoCuaHang(storeId, {
+        page: 0,
+        size: 500,
+      });
+      if (res.success && res.data) {
+        const map: Record<number, number> = {};
+        const prodStockMap: Record<number, number> = {};
+        const content = res.data.content || [];
+        content.forEach((item) => {
+          map[item.maBienThe] = item.soLuong;
+          if (item.maSp) {
+            prodStockMap[item.maSp] = (prodStockMap[item.maSp] || 0) + item.soLuong;
+          }
+        });
+        setStockMap(map);
+        setProductStockMap(prodStockMap);
+      }
+    } catch (err) {
+      console.error("Error loading stock levels:", err);
+    }
+  };
 
-    const fetchStoreStock = async () => {
+  useEffect(() => {
+    if (selectedStoreId) {
+      fetchStoreStockMap(selectedStoreId);
+    }
+  }, [selectedStoreId]);
+
+  // Fetch unique products based on Search, Category, Paging
+  useEffect(() => {
+    const fetchProductsData = async () => {
       setIsLoadingProducts(true);
       try {
-        const res = await tonKhoService.getTonKhoCuaHang(selectedStoreId, {
+        const res = await sanPhamService.getSanPhams({
           search: deferredSearch || undefined,
+          maDm: selectedCategoryId,
           page,
-          size: 9, // Fit grid perfectly
+          size: 6, // 2 columns x 3 rows is visually perfect
+          trangThai: "DangBan",
         });
         if (res.success && res.data) {
           setProducts(res.data.content || []);
-          // Note: Backend PageResponse contains page details.
-          // Since the page parameter is 0-based in backend, calculate totalPages
           const total = res.data.totalElements || 0;
           setTotalElements(total);
-          setTotalPages(Math.ceil(total / 9) || 1);
+          setTotalPages(Math.ceil(total / 6) || 1);
         }
       } catch (err) {
-        console.error("Error loading store stock:", err);
-        toast.error("Không thể tải tồn kho cửa hàng");
+        console.error("Error loading products catalog:", err);
+        toast.error("Không thể tải danh mục sản phẩm");
       } finally {
         setIsLoadingProducts(false);
       }
     };
 
-    fetchStoreStock();
-  }, [selectedStoreId, deferredSearch, page]);
+    fetchProductsData();
+  }, [deferredSearch, selectedCategoryId, page]);
 
   // Search customers
   useEffect(() => {
@@ -181,10 +254,10 @@ const HoaDonPage = () => {
     searchCustomers();
   }, [deferredCustomerSearch]);
 
-  // Reset page when search term changes
+  // Reset page when search or category changes
   useEffect(() => {
     setPage(0);
-  }, [searchTerm]);
+  }, [searchTerm, selectedCategoryId]);
 
   // Clear cart if store changes
   const handleStoreChange = (storeId: number) => {
@@ -200,62 +273,102 @@ const HoaDonPage = () => {
     setVoucherCode("");
   };
 
-  // Add item to cart
-  const addToCart = (product: TonKhoCuaHang) => {
-    if (product.soLuong <= 0) {
+  // Add a specific variant to cart
+  const handleAddVariantToCart = (product: SanPham, variant: SanPhamVariant, maxStock: number) => {
+    const existing = cart.find((item) => item.maBienThe === variant.maBienThe);
+    
+    if (existing) {
+      if (existing.soLuong >= maxStock) {
+        toast.error(`Chỉ còn ${maxStock} sản phẩm trong kho!`);
+        return;
+      }
+      
+      setCart((prev) =>
+        prev.map((item) =>
+          item.maBienThe === variant.maBienThe
+            ? { ...item, soLuong: item.soLuong + 1 }
+            : item
+        )
+      );
+    } else {
+      toast.success(`Đã thêm ${product.tenSp} (${variant.sku}) vào giỏ`);
+      const details = [variant.mauSac, variant.dungLuong].filter(Boolean).join(" - ");
+      const displayTitle = details ? `${product.tenSp} (${details})` : product.tenSp;
+
+      setCart((prev) => [
+        ...prev,
+        {
+          maBienThe: variant.maBienThe,
+          tenSp: displayTitle,
+          sku: variant.sku,
+          giaBan: variant.giaBan,
+          soLuong: 1,
+          maxSoLuong: maxStock,
+          anhSp: product.anh,
+          mauSac: variant.mauSac,
+          dungLuong: variant.dungLuong,
+          giamGia: 0,
+        },
+      ]);
+    }
+  };
+
+  // Click on a product from catalog
+  const handleProductClick = async (product: SanPham) => {
+    const totalProductStock = productStockMap[product.maSp] || 0;
+
+    if (totalProductStock <= 0) {
       toast.error("Sản phẩm đã hết hàng tại cửa hàng này!");
       return;
     }
 
-    setCart((prev) => {
-      const existing = prev.find((item) => item.maBienThe === product.maBienThe);
-      if (existing) {
-        if (existing.soLuong >= product.soLuong) {
-          toast.error(`Chỉ còn ${product.soLuong} sản phẩm trong kho!`);
-          return prev;
-        }
-        return prev.map((item) =>
-          item.maBienThe === product.maBienThe
-            ? { ...item, soLuong: item.soLuong + 1 }
-            : item
-        );
-      }
+    const loadToast = toast.loading("Đang tải thông tin phiên bản...");
+    try {
+      const res = await sanPhamService.getSanPhamDetail(product.maSp);
+      toast.dismiss(loadToast);
+      if (res.success && res.data) {
+        const detailedProduct = res.data;
+        const productVariants = detailedProduct.variants || [];
 
-      toast.success(`Đã thêm ${product.tenSp} vào giỏ`);
-      return [
-        ...prev,
-        {
-          maBienThe: product.maBienThe,
-          tenSp: product.tenSp,
-          sku: product.sku,
-          giaBan: product.giaBan,
-          soLuong: 1,
-          maxSoLuong: product.soLuong,
-          anhSp: product.anhSp,
-          mauSac: product.mauSac,
-          dungLuong: product.dungLuong,
-          giamGia: 0,
-        },
-      ];
-    });
+        if (productVariants.length === 1) {
+          // Shortcut: directly add the only variant if only 1 exists
+          const soleVariant = productVariants[0];
+          const stock = stockMap[soleVariant.maBienThe] || 0;
+          handleAddVariantToCart(detailedProduct, soleVariant, stock);
+        } else {
+          // Multiple options: open selection modal
+          setSelectedProductForVariant(detailedProduct);
+        }
+      } else {
+        toast.error("Không thể tải chi tiết sản phẩm");
+      }
+    } catch (err) {
+      toast.dismiss(loadToast);
+      console.error("Error loading product variants:", err);
+      toast.error("Có lỗi xảy ra khi tải phiên bản sản phẩm");
+    }
   };
 
   // Update item quantity in cart
   const updateCartQty = (maBienThe: number, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.maBienThe !== maBienThe) return item;
-          const newQty = item.soLuong + delta;
-          if (newQty <= 0) return null; // will be filtered out below
-          if (newQty > item.maxSoLuong) {
-            toast.error(`Vượt quá tồn kho có sẵn (${item.maxSoLuong})!`);
-            return item;
-          }
-          return { ...item, soLuong: newQty };
-        })
-        .filter((item): item is CartItem => item !== null)
-    );
+    const item = cart.find((i) => i.maBienThe === maBienThe);
+    if (!item) return;
+
+    const newQty = item.soLuong + delta;
+    if (newQty > item.maxSoLuong) {
+      toast.error(`Vượt quá tồn kho có sẵn (${item.maxSoLuong})!`);
+      return;
+    }
+
+    if (newQty <= 0) {
+      setCart((prev) => prev.filter((i) => i.maBienThe !== maBienThe));
+    } else {
+      setCart((prev) =>
+        prev.map((i) =>
+          i.maBienThe === maBienThe ? { ...i, soLuong: newQty } : i
+        )
+      );
+    }
   };
 
   // Update manual line discount
@@ -413,19 +526,9 @@ const HoaDonPage = () => {
         setSelectedCustomer(null);
         setTienKhachDua("");
 
-        // Refresh product stock list to get updated quantities
+        // Refresh stock maps reactively
+        fetchStoreStockMap(selectedStoreId);
         setPage(0);
-        const stockRes = await tonKhoService.getTonKhoCuaHang(selectedStoreId, {
-          search: deferredSearch || undefined,
-          page: 0,
-          size: 9,
-        });
-        if (stockRes.success && stockRes.data) {
-          setProducts(stockRes.data.content || []);
-          const total = stockRes.data.totalElements || 0;
-          setTotalElements(total);
-          setTotalPages(Math.ceil(total / 9) || 1);
-        }
       } else {
         toast.error(res.message || "Giao dịch thanh toán thất bại!");
       }
@@ -457,7 +560,7 @@ const HoaDonPage = () => {
           {isAdmin ? (
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 shrink-0">
-                <FiBuilding className="text-gray-400" />
+                <HiOutlineBuildingStorefront className="text-gray-400" />
                 Cửa hàng:
               </span>
               <select
@@ -487,7 +590,7 @@ const HoaDonPage = () => {
 
       {/* Main Split Content */}
       <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-h-0">
-        {/* Left Side: Product Selection Grid */}
+        {/* Left Side: Category Sidebar & Product Catalog Grid */}
         <div className="w-full lg:w-[60%] bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
           {/* Products Search Header */}
           <div className="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50 shrink-0">
@@ -499,151 +602,215 @@ const HoaDonPage = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm sản phẩm theo tên, SKU, barcode..."
+                placeholder="Tìm sản phẩm theo tên, thương hiệu..."
                 className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-400"
               />
             </div>
           </div>
 
-          {/* Product Items List Grid */}
-          <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-gray-50/50">
-            {isLoadingProducts ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
-                <FiLoader className="w-8 h-8 animate-spin text-blue-500" />
-                <span className="text-sm font-medium">Đang tải sản phẩm từ kho...</span>
+          {/* Catalog panel: Split into Category Sidebar & Product Grid */}
+          <div className="flex-1 flex overflow-hidden min-h-0">
+            {/* 1. Category Tree Sidebar (Left part of catalog) */}
+            <div className="w-48 border-r border-gray-100 flex flex-col h-full bg-white select-none shrink-0 overflow-y-auto">
+              <div className="p-3 border-b border-gray-50 flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <FiGrid /> Danh mục
               </div>
-            ) : products.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 p-8 text-center">
-                <div className="p-4 bg-gray-100 rounded-full mb-3">
-                  <FiAlertCircle size={28} />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Tồn kho không khả dụng</span>
-                <span className="text-xs text-gray-500 max-w-xs mt-1">
-                  Không tìm thấy sản phẩm nào trong kho của cửa hàng này phù hợp với bộ lọc tìm kiếm.
-                </span>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {products.map((p) => {
-                  const isOutOfStock = p.soLuong <= 0;
-                  const itemInCart = cart.find((item) => item.maBienThe === p.maBienThe);
-                  const remainingQty = p.soLuong - (itemInCart?.soLuong || 0);
+              <div className="p-2 space-y-1">
+                {/* All products button */}
+                <button
+                  onClick={() => setSelectedCategoryId(undefined)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+                    selectedCategoryId === undefined
+                      ? "bg-blue-50 text-blue-600 font-extrabold"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <FiGrid size={14} className="opacity-70" />
+                  <span>Tất cả</span>
+                </button>
 
-                  return (
-                    <div
-                      key={p.maBienThe}
-                      onClick={() => !isOutOfStock && addToCart(p)}
-                      className={`relative p-3 border rounded-xl bg-white shadow-sm flex flex-col justify-between transition-all select-none group ${
-                        isOutOfStock
-                          ? "opacity-60 cursor-not-allowed border-gray-200"
-                          : remainingQty <= 0
-                            ? "border-blue-300 ring-2 ring-blue-50 cursor-pointer"
-                            : "border-gray-200 hover:border-blue-500 hover:shadow-md cursor-pointer"
-                      }`}
-                    >
-                      {/* Badge quantity overlay */}
-                      {itemInCart && (
-                        <span className="absolute top-2 right-2 bg-blue-600 text-white font-bold text-[11px] px-2 py-0.5 rounded-full z-10 shadow-sm animate-in scale-in duration-200">
-                          {itemInCart.soLuong}
-                        </span>
-                      )}
-
-                      <div className="space-y-2">
-                        {/* Product Image */}
-                        <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-100 shrink-0">
-                          {p.anhSp ? (
-                            <img
-                              src={p.anhSp}
-                              alt={p.tenSp}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <span className="text-xs text-gray-400 font-semibold uppercase">TechStore</span>
-                          )}
-                        </div>
-
-                        {/* Title & SKU */}
-                        <div>
-                          <h4 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 min-h-[40px]">
-                            {p.tenSp}
-                          </h4>
-                          <span className="text-[10px] text-gray-400 block font-medium mt-0.5">SKU: {p.sku}</span>
-                        </div>
-
-                        {/* Specs capacity / color */}
-                        <div className="flex flex-wrap gap-1">
-                          {p.mauSac && (
-                            <span className="bg-gray-100 text-gray-600 text-[10px] font-semibold px-1.5 py-0.5 rounded">
-                              {p.mauSac}
-                            </span>
-                          )}
-                          {p.dungLuong && (
-                            <span className="bg-blue-50 text-blue-600 text-[10px] font-semibold px-1.5 py-0.5 rounded">
-                              {p.dungLuong}
-                            </span>
-                          )}
-                          {p.kichThuoc && (
-                            <span className="bg-purple-50 text-purple-600 text-[10px] font-semibold px-1.5 py-0.5 rounded">
-                              {p.kichThuoc}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Cost and Stock Status */}
-                      <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
-                        <span className="font-extrabold text-blue-600 text-sm">{formatCurrency(p.giaBan)}</span>
-                        {isOutOfStock ? (
-                          <span className="text-[11px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">
-                            Hết kho
+                {isLoadingCategories ? (
+                  <div className="flex justify-center p-4">
+                    <FiLoader className="animate-spin text-blue-500" size={14} />
+                  </div>
+                ) : (
+                  categories.map((c) => {
+                    const Icon = iconMap[c.maDm] || FiGrid;
+                    return (
+                      <div key={c.maDm} className="space-y-1">
+                        <button
+                          onClick={() => setSelectedCategoryId(c.maDm)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
+                            selectedCategoryId === c.maDm
+                              ? "bg-blue-50 text-blue-600 font-extrabold"
+                              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Icon size={14} className="opacity-70" />
+                            <span className="truncate">{c.tenDm}</span>
                           </span>
-                        ) : remainingQty <= 0 ? (
-                          <span className="text-[11px] font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded">
-                            Đã hết trong kho
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            Kho: {p.soLuong}
-                          </span>
+                        </button>
+
+                        {/* Child Subcategories */}
+                        {c.children && c.children.length > 0 && (
+                          <div className="pl-6 space-y-0.5 border-l border-gray-100 ml-4 py-0.5">
+                            {c.children.map((child) => (
+                              <button
+                                key={child.maDm}
+                                onClick={() => setSelectedCategoryId(child.maDm)}
+                                className={`w-full text-left px-2.5 py-1.5 rounded-md text-[11px] font-semibold block transition-all ${
+                                  selectedCategoryId === child.maDm
+                                    ? "bg-blue-50 text-blue-600 font-bold"
+                                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+                                }`}
+                              >
+                                {child.tenDm}
+                              </button>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Product Paging Controls */}
-          {totalPages > 1 && (
-            <div className="p-4 border-t border-gray-100 bg-white flex items-center justify-between shrink-0 select-none">
-              <span className="text-xs text-gray-500">
-                Hiển thị <b>{products.length}</b> trên tổng số <b>{totalElements}</b> sản phẩm
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  disabled={page === 0}
-                  onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-                  className="p-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent text-gray-600"
-                >
-                  <FiChevronLeft size={16} />
-                </button>
-                <span className="text-xs font-semibold text-gray-700 px-3">
-                  Trang {page + 1} / {totalPages}
-                </span>
-                <button
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage((prev) => prev + 1)}
-                  className="p-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent text-gray-600"
-                >
-                  <FiChevronRight size={16} />
-                </button>
+                    );
+                  })
+                )}
               </div>
             </div>
-          )}
+
+            {/* 2. Product Catalog Grid (Right part of catalog) */}
+            <div className="flex-1 flex flex-col h-full bg-gray-50/50 min-w-0">
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                {isLoadingProducts ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
+                    <FiLoader className="w-8 h-8 animate-spin text-blue-500" />
+                    <span className="text-sm font-medium">Đang tải sản phẩm...</span>
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 p-8 text-center">
+                    <div className="p-4 bg-gray-100 rounded-full mb-3">
+                      <FiAlertCircle size={28} />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700">Không tìm thấy sản phẩm</span>
+                    <span className="text-xs text-gray-500 max-w-xs mt-1">
+                      Không có sản phẩm nào thuộc bộ lọc này hiện đang bán.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {products.map((p) => {
+                      // Calculate total store stock of this product's variants
+                      const totalStock = productStockMap[p.maSp] || 0;
+
+                      const isOutOfStock = totalStock <= 0;
+                      const hasMultipleVariants = (p.variantSummary?.totalVariants || 0) > 1;
+
+                      // Price range
+                      const minPrice = p.variantSummary?.minGiaBan || 0;
+                      const maxPrice = p.variantSummary?.maxGiaBan || 0;
+                      const priceString = minPrice === maxPrice 
+                        ? formatCurrency(minPrice) 
+                        : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`;
+
+                      return (
+                        <div
+                          key={p.maSp}
+                          onClick={() => handleProductClick(p)}
+                          className={`relative p-3 border rounded-xl bg-white shadow-sm flex flex-col justify-between transition-all select-none group ${
+                            isOutOfStock
+                              ? "opacity-60 cursor-not-allowed border-gray-200"
+                              : "border-gray-200 hover:border-blue-500 hover:shadow-md cursor-pointer"
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            {/* Product Image */}
+                            <div className="w-full h-28 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-100 shrink-0">
+                              {p.anh ? (
+                                <img
+                                  src={p.anh}
+                                  alt={p.tenSp}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-xs text-gray-400 font-semibold uppercase">TechStore</span>
+                              )}
+                            </div>
+
+                            {/* Title & Brand */}
+                            <div>
+                              <h4 className="font-bold text-gray-900 text-xs leading-snug line-clamp-2 min-h-[36px]">
+                                {p.tenSp}
+                              </h4>
+                              <span className="text-[10px] text-gray-400 block font-medium mt-0.5">Hiệu: {p.thuongHieu}</span>
+                            </div>
+                          </div>
+
+                          {/* Cost and Stock Status */}
+                          <div className="mt-3 pt-2 border-t border-gray-100 flex items-end justify-between">
+                            <div>
+                              <span className="text-[9px] text-gray-400 block font-bold">GIÁ BÁN</span>
+                              <span className="font-extrabold text-blue-600 text-[11px] leading-tight block">
+                                {priceString}
+                              </span>
+                            </div>
+                            
+                            <div className="text-right">
+                              {isOutOfStock ? (
+                                <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">
+                                  Hết kho
+                                </span>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  {hasMultipleVariants && (
+                                    <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded block text-center">
+                                      {p.variantSummary?.totalVariants} Phiên bản
+                                    </span>
+                                  )}
+                                  <span className="text-[9px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded block text-center">
+                                    Tồn: {totalStock}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Product Paging Controls */}
+              {totalPages > 1 && (
+                <div className="p-4 border-t border-gray-100 bg-white flex items-center justify-between shrink-0 select-none">
+                  <span className="text-xs text-gray-500">
+                    Hiển thị <b>{products.length}</b> trên <b>{totalElements}</b> sản phẩm
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={page === 0}
+                      onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                      className="p-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent text-gray-600"
+                    >
+                      <FiChevronLeft size={16} />
+                    </button>
+                    <span className="text-xs font-semibold text-gray-700 px-3">
+                      Trang {page + 1} / {totalPages}
+                    </span>
+                    <button
+                      disabled={page >= totalPages - 1}
+                      onClick={() => setPage((prev) => prev + 1)}
+                      className="p-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent text-gray-600"
+                    >
+                      <FiChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Right Side: Checkout Summary & Action Panel */}
@@ -663,7 +830,7 @@ const HoaDonPage = () => {
                 </div>
                 <span className="text-sm font-semibold text-gray-700">Giỏ hàng rỗng</span>
                 <span className="text-xs text-gray-500 max-w-[200px]">
-                  Chọn sản phẩm từ danh sách bên trái để thêm vào đơn hàng.
+                  Chọn sản phẩm từ danh mục bên trái để thêm vào đơn hàng.
                 </span>
               </div>
             ) : (
@@ -681,7 +848,7 @@ const HoaDonPage = () => {
 
                     {/* Meta */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-gray-900 text-xs truncate leading-snug">{item.tenSp}</h4>
+                      <h4 className="font-bold text-gray-900 text-xs leading-snug">{item.tenSp}</h4>
                       <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                         <span className="text-[9px] text-gray-400">SKU: {item.sku}</span>
                         {item.mauSac && <span className="text-[9px] text-gray-500 bg-gray-100 px-1 rounded">{item.mauSac}</span>}
@@ -1004,6 +1171,19 @@ const HoaDonPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Product Variant Selection Modal */}
+      <VariantSelectModal
+        isOpen={selectedProductForVariant !== null}
+        onClose={() => setSelectedProductForVariant(null)}
+        product={selectedProductForVariant}
+        stockMap={stockMap}
+        onSelectVariant={(variant, maxStock) => {
+          if (selectedProductForVariant) {
+            handleAddVariantToCart(selectedProductForVariant, variant, maxStock);
+          }
+        }}
+      />
 
       {/* Customer Quick Registration Modal */}
       <CreateCustomerModal

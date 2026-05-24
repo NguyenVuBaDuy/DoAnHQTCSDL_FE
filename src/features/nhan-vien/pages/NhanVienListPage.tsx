@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   FiDownload,
   FiPlus,
@@ -20,6 +20,11 @@ import { useAppSelector } from "../../../store";
 import NhanVienModal from "../components/NhanVienModal";
 import NhanVienDetailDrawer from "../components/NhanVienDetailDrawer";
 import SuccessModal from "../../../components/common/SuccessModal";
+import { format } from "date-fns";
+import { nhanVienService } from "../../../services/nhanVienService";
+import { ExportExcelModal } from "../../../components/common/ExportExcelModal";
+import type { ExcelColumn } from "../../../utils/excelUtils";
+import type { NhanVienListItem } from "../../../types/nhan-vien";
 
 const NhanVienListPage = () => {
   const { user } = useAppSelector((state) => state.auth);
@@ -29,6 +34,66 @@ const NhanVienListPage = () => {
     page: 0,
     size: 10,
   });
+
+  const [exportData, setExportData] = useState<NhanVienListItem[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  const excelColumns: ExcelColumn<NhanVienListItem>[] = useMemo(
+    () => [
+      { header: "Mã Nhân Viên", key: "maNv" },
+      { header: "Họ Tên", key: "hoTen" },
+      { header: "Cửa Hàng", key: "tenCh" },
+      { header: "Chức Vụ", key: "chucVu", transform: (val) => getRoleName(val) },
+      { header: "Số Điện Thoại", key: "sdt" },
+      { header: "CCCD", key: "cccd" },
+      { header: "Giới Tính", key: "gioiTinh" },
+      {
+        header: "Ngày Sinh",
+        key: "ngaySinh",
+        transform: (val) => {
+          if (!val) return "N/A";
+          try {
+            return format(new Date(val), "dd/MM/yyyy");
+          } catch {
+            return val;
+          }
+        },
+      },
+      { header: "Địa Chỉ", key: "diaChi" },
+      {
+        header: "Trạng Thái Tài Khoản",
+        key: "trangThai",
+        transform: (val) => {
+          if (val === "HoatDong") return "Hoạt động";
+          if (val === "KhoaCung") return "Khóa cứng";
+          if (val === "KhoaTam") return "Khóa tạm";
+          return val || "Hoạt động";
+        },
+      },
+    ],
+    [],
+  );
+
+  const handleExportClick = async () => {
+    setIsExporting(true);
+    try {
+      // Fetch all matching data based on current parameters (limit to 100000)
+      const response = await nhanVienService.getNhanViens({
+        ...params,
+        page: 0,
+        size: 100000,
+      });
+      const allData = response.data?.content || [];
+      setExportData(allData);
+      setIsExportModalOpen(true);
+    } catch (error) {
+      console.error("Lỗi khi tải dữ liệu xuất Excel:", error);
+      toast.error("Không thể tải dữ liệu để xuất Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
@@ -112,9 +177,13 @@ const NhanVienListPage = () => {
           Quản lý nhân viên
         </h1>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm">
-            <FiDownload />
-            Xuất Excel
+          <button 
+            disabled={isExporting}
+            onClick={handleExportClick}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            <FiDownload className={isExporting ? "animate-bounce" : ""} />
+            <span>{isExporting ? "Đang tải..." : "Xuất Excel"}</span>
           </button>
           <button
             onClick={handleAddClick}
@@ -439,6 +508,15 @@ const NhanVienListPage = () => {
             ? "Thông tin nhân viên đã được cập nhật."
             : "Nhân viên mới đã được thêm vào hệ thống."
         }
+      />
+
+      <ExportExcelModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        data={exportData}
+        columns={excelColumns}
+        defaultFileName="Danh_Sach_Nhan_Vien"
+        sheetName="Nhân Viên"
       />
     </div>
   );

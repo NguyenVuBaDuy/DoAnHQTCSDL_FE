@@ -843,7 +843,7 @@ export const PhieuChuyenTab = () => {
                               .filter(
                                 (st) =>
                                   st.maCh !== myStoreId &&
-                                  st.trangThai === "HoatDong",
+                                  st.trangThai?.toLowerCase() !== "ngunghoatdong",
                               )
                               .map((st) => (
                                 <option key={st.maCh} value={st.maCh}>
@@ -907,7 +907,7 @@ export const PhieuChuyenTab = () => {
                               .filter(
                                 (st) =>
                                   st.maCh !== myStoreId &&
-                                  st.trangThai === "HoatDong",
+                                  st.trangThai?.toLowerCase() !== "ngunghoatdong",
                               )
                               .map((st) => (
                                 <option key={st.maCh} value={st.maCh}>
@@ -938,7 +938,7 @@ export const PhieuChuyenTab = () => {
                         {stores
                           .filter(
                             (st) =>
-                              st.trangThai === "HoatDong" &&
+                              st.trangThai?.toLowerCase() !== "ngunghoatdong" &&
                               st.maCh !== destStoreId,
                           )
                           .map((st) => (
@@ -963,7 +963,7 @@ export const PhieuChuyenTab = () => {
                         {stores
                           .filter(
                             (st) =>
-                              st.trangThai === "HoatDong" &&
+                              st.trangThai?.toLowerCase() !== "ngunghoatdong" &&
                               st.maCh !== sourceStoreId,
                           )
                           .map((st) => (

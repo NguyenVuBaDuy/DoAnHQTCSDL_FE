@@ -196,7 +196,7 @@ const NhanVienListPage = () => {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
           <span className="text-gray-500 text-sm font-medium">
             Tổng nhân viên
@@ -212,10 +212,6 @@ const NhanVienListPage = () => {
           <span className="text-2xl font-bold text-[#16A34A]">
             {apiResponse?.data?.soTaiKhoanHoatDong ?? 0}
           </span>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
-          <span className="text-gray-500 text-sm font-medium">Nghỉ phép</span>
-          <span className="text-2xl font-bold text-[#CA8A04]">-</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
           <span className="text-gray-500 text-sm font-medium">

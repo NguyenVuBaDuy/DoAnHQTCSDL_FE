@@ -9,10 +9,8 @@ import {
   FiCalendar,
   FiFilter,
   FiGrid,
-  FiUser,
   FiActivity,
   FiTrash2,
-  FiCheckCircle,
 } from "react-icons/fi";
 import { useAppSelector } from "../../../store";
 import { hoaDonService } from "../../../services/hoaDonService";
@@ -58,8 +56,7 @@ export const InvoiceList = () => {
   );
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Actions state
-  const [isActionPending, setIsActionPending] = useState(false);
+
 
   // Load stores list for Admin
   useEffect(() => {
@@ -147,28 +144,7 @@ export const InvoiceList = () => {
     setIsDetailOpen(true);
   };
 
-  const handleCancelInvoice = async (maHd: number) => {
-    const confirm = window.confirm(
-      "Bạn có chắc chắn muốn HỦY hóa đơn này? Thao tác này sẽ tự động khôi phục số lượng tồn kho.",
-    );
-    if (!confirm) return;
 
-    setIsActionPending(true);
-    try {
-      const res = await hoaDonService.cancelHoaDon(maHd);
-      if (res.success) {
-        toast.success("Hủy hóa đơn thành công và đã hoàn trả kho hàng!");
-        fetchInvoices();
-      } else {
-        toast.error(res.message || "Không thể hủy hóa đơn");
-      }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.response?.data?.message || "Lỗi khi hủy hóa đơn");
-    } finally {
-      setIsActionPending(false);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -386,10 +362,6 @@ export const InvoiceList = () => {
               </thead>
               <tbody className="divide-y divide-gray-150">
                 {filteredInvoices.map((inv) => {
-                  const isHuy =
-                    inv.trangThai === "Huy" ||
-                    inv.trangThai === "DaHuy" ||
-                    inv.trangThai === "Cancelled";
                   return (
                     <tr
                       key={inv.maHd}
@@ -456,16 +428,6 @@ export const InvoiceList = () => {
                           >
                             <FiEye size={14} />
                           </button>
-                          {!isHuy && (
-                            <button
-                              onClick={() => handleCancelInvoice(inv.maHd)}
-                              disabled={isActionPending}
-                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Hủy hóa đơn"
-                            >
-                              <FiTrash2 size={14} />
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -530,7 +492,6 @@ export const InvoiceList = () => {
           setSelectedInvoice(null);
         }}
         invoice={selectedInvoice}
-        onRefresh={fetchInvoices}
       />
     </div>
   );

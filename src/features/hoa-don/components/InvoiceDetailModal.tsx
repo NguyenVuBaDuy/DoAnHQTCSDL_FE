@@ -6,11 +6,7 @@ import {
   FiUser,
   FiMapPin,
   FiCalendar,
-  FiCreditCard,
-  FiPercent,
   FiLoader,
-  FiTrash2,
-  FiCheckCircle,
 } from "react-icons/fi";
 import { hoaDonService } from "../../../services/hoaDonService";
 import type { HoaDonResponse, ChiTietHoaDonResponse } from "../../../types/hoa-don";
@@ -19,7 +15,6 @@ interface InvoiceDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   invoice: HoaDonResponse | null;
-  onRefresh: () => void;
 }
 
 const formatCurrency = (val: number) => {
@@ -33,11 +28,9 @@ export const InvoiceDetailModal = ({
   isOpen,
   onClose,
   invoice,
-  onRefresh,
 }: InvoiceDetailModalProps) => {
   const [details, setDetails] = useState<ChiTietHoaDonResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isActionPending, setIsActionPending] = useState(false);
 
   useEffect(() => {
     if (isOpen && invoice) {
@@ -66,51 +59,7 @@ export const InvoiceDetailModal = ({
 
   if (!isOpen || !invoice) return null;
 
-  const handleUpdateStatus = async (status: string) => {
-    const confirm = window.confirm(`Bạn có chắc chắn muốn chuyển trạng thái hóa đơn sang "${status}"?`);
-    if (!confirm) return;
 
-    setIsActionPending(true);
-    try {
-      const res = await hoaDonService.updateStatus(invoice.maHd, status);
-      if (res.success) {
-        toast.success("Cập nhật trạng thái thành công!");
-        onRefresh();
-        onClose();
-      } else {
-        toast.error(res.message || "Không thể cập nhật trạng thái");
-      }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.response?.data?.message || "Lỗi khi cập nhật trạng thái");
-    } finally {
-      setIsActionPending(false);
-    }
-  };
-
-  const handleCancelInvoice = async () => {
-    const confirm = window.confirm(
-      "Cảnh báo: Bạn có chắc chắn muốn HỦY hóa đơn này? Thao tác này sẽ hoàn trả số lượng sản phẩm vào kho và KHÔNG THỂ HOÀN TÁC."
-    );
-    if (!confirm) return;
-
-    setIsActionPending(true);
-    try {
-      const res = await hoaDonService.cancelHoaDon(invoice.maHd);
-      if (res.success) {
-        toast.success("Hủy hóa đơn thành công và đã hoàn trả kho hàng!");
-        onRefresh();
-        onClose();
-      } else {
-        toast.error(res.message || "Không thể hủy hóa đơn");
-      }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.response?.data?.message || "Lỗi khi hủy hóa đơn");
-    } finally {
-      setIsActionPending(false);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -145,7 +94,7 @@ export const InvoiceDetailModal = ({
     }
   };
 
-  const isCancelled = invoice.trangThai === "Huy" || invoice.trangThai === "DaHuy" || invoice.trangThai === "Cancelled";
+
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fadeIn">
@@ -368,63 +317,13 @@ export const InvoiceDetailModal = ({
         </div>
 
         {/* Modal Actions Footer */}
-        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div>
-            {!isCancelled && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-500 font-semibold mr-1">Chuyển trạng thái nhanh:</span>
-                {invoice.trangThai === "ChoThanhToan" && (
-                  <button
-                    onClick={() => handleUpdateStatus("DaThanhToan")}
-                    disabled={isActionPending}
-                    className="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg font-bold text-xs shadow-sm transition-all flex items-center gap-1"
-                  >
-                    <FiCheckCircle size={14} /> XÁC NHẬN THANH TOÁN
-                  </button>
-                )}
-                {/* Generic quick status list */}
-                {invoice.trangThai !== "DaThanhToan" && invoice.trangThai !== "ChoThanhToan" && (
-                  <select
-                    disabled={isActionPending}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleUpdateStatus(e.target.value);
-                      }
-                    }}
-                    defaultValue=""
-                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="" disabled>Chọn trạng thái...</option>
-                    <option value="ChoThanhToan">Chờ thanh toán</option>
-                    <option value="DaThanhToan">Đã thanh toán</option>
-                  </select>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            {!isCancelled && (
-              <button
-                onClick={handleCancelInvoice}
-                disabled={isActionPending}
-                className="px-4 py-2 bg-red-50 hover:bg-red-100 disabled:bg-gray-150 text-red-600 rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5"
-              >
-                {isActionPending ? (
-                  <FiLoader className="animate-spin" />
-                ) : (
-                  <FiTrash2 />
-                )}
-                <span>HỦY HÓA ĐƠN</span>
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl font-bold text-xs transition-colors"
-            >
-              Đóng
-            </button>
-          </div>
+        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            Đóng
+          </button>
         </div>
       </div>
     </div>

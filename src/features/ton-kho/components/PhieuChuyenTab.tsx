@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  FiSearch,
   FiLoader,
   FiPlus,
   FiTrash2,
@@ -22,6 +21,7 @@ import { cuaHangService } from "../../../services/cuaHangService";
 import { tonKhoService } from "../../../services/tonKhoService";
 import { phieuChuyenKhoService } from "../../../services/phieuChuyenKhoService";
 import { sanPhamService } from "../../../services/sanPhamService";
+import { ProductSelect } from "./ProductSelect";
 import type { CuaHang } from "../../../types/cua-hang";
 import type { TonKhoCuaHang } from "../../../types/ton-kho";
 import type { SanPhamVariant } from "../../../types/san-pham";
@@ -37,62 +37,53 @@ export const PhieuChuyenTab = () => {
   const queryClient = useQueryClient();
   const { user } = useAppSelector((state) => state.auth);
   const role = user?.tennhom;
-  const myStoreId = user?.nhanvien?.mach;
+  const myStoreId = user?.nhanvien?.mach ?? (user as any)?.mach;
+
 
   const isAdmin = role === "Admin";
 
   // List Page State
   const [currentPage, setCurrentPage] = useState(0); // 0-based in UI
-  const [selectedPck, setSelectedPck] = useState<PhieuChuyenKhoResponse | null>(null);
+  const [selectedPck, setSelectedPck] = useState<PhieuChuyenKhoResponse | null>(
+    null,
+  );
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  interface TransferRowState {
+    maSp?: number;
+    maBienThe: number;
+    soLuong: number;
+    variants: SanPhamVariant[];
+    isLoadingVariants: boolean;
+  }
+
+  const initialRow: TransferRowState = {
+    maSp: undefined,
+    maBienThe: 0,
+    soLuong: 1,
+    variants: [],
+    isLoadingVariants: false,
+  };
 
   // Form State
   const [transferType, setTransferType] = useState<"send" | "receive">("send"); // for staff/managers
   const [sourceStoreId, setSourceStoreId] = useState<number | "">("");
   const [destStoreId, setDestStoreId] = useState<number | "">("");
   const [note, setNote] = useState("");
-  const [selectedItems, setSelectedItems] = useState<
-    Array<{
-      variant: TonKhoCuaHang;
-      soLuong: number;
-    }>
-  >([]);
-
-  // Variant Search inside Form
-  const [variantSearch, setVariantSearch] = useState("");
-  const [debouncedVariantSearch, setDebouncedVariantSearch] = useState("");
-  const [isVariantDropdownOpen, setIsVariantDropdownOpen] = useState(false);
-  const variantSearchRef = useRef<HTMLDivElement>(null);
-
-  // Close variant dropdown on outside click
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (
-        variantSearchRef.current &&
-        !variantSearchRef.current.contains(e.target as Node)
-      ) {
-        setIsVariantDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
-
-  // Debounce variant search
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedVariantSearch(variantSearch);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [variantSearch]);
+  const [rows, setRows] = useState<TransferRowState[]>([{ ...initialRow }]);
 
   // Clear selected items if the source store changes to prevent invalid transfers
   useEffect(() => {
-    if (selectedItems.length > 0) {
+    if (
+      rows.length > 0 &&
+      (rows.length > 1 || rows[0].maSp || rows[0].maBienThe)
+    ) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedItems([]);
-      toast.success("Đã làm mới danh sách hàng chờ chuyển do thay đổi kho nguồn.");
+      setRows([{ ...initialRow }]);
+      toast.success(
+        "Đã làm mới danh sách hàng chờ chuyển do thay đổi kho nguồn.",
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceStoreId]);
@@ -106,7 +97,8 @@ export const PhieuChuyenTab = () => {
     isError: isTransfersError,
   } = useQuery<ApiResponse<PageResponse<PhieuChuyenKhoResponse>>, Error>({
     queryKey: ["phieu-chuyen-kho-list", currentPage],
-    queryFn: () => phieuChuyenKhoService.getAll({ page: currentPage + 1, size: 10 }),
+    queryFn: () =>
+      phieuChuyenKhoService.getAll({ page: currentPage + 1, size: 10 }),
     placeholderData: (prev) => prev,
   });
 
@@ -141,20 +133,7 @@ export const PhieuChuyenTab = () => {
     return map;
   }, [sourceStoreInventoryResponse]);
 
-  // 3. Fetch Product Variants from the public API
-  const { data: variantsResponse, isLoading: isVariantsLoading } = useQuery<
-    ApiResponse<PageResponse<SanPhamVariant>>,
-    Error
-  >({
-    queryKey: ["variants-search-pck-public", debouncedVariantSearch],
-    queryFn: () =>
-      sanPhamService.getAllBienThe({
-        search: debouncedVariantSearch,
-        page: 1,
-        size: 50,
-      }),
-    enabled: isCreateOpen && isVariantDropdownOpen && !!sourceStoreId,
-  });
+  // Public variants query removed as we now load per-product details on-demand.
 
   // 4. Fetch Transfer Slip Details when selected
   const { data: pckDetailsResponse, isLoading: isDetailsLoading } = useQuery<
@@ -191,10 +170,14 @@ export const PhieuChuyenTab = () => {
     mutationFn: phieuChuyenKhoService.approve,
     onSuccess: (res) => {
       if (res.success) {
-        toast.success("Duyệt phiếu chuyển kho thành công! Số lượng kho đã được cập nhật.");
+        toast.success(
+          "Duyệt phiếu chuyển kho thành công! Số lượng kho đã được cập nhật.",
+        );
         queryClient.invalidateQueries({ queryKey: ["phieu-chuyen-kho-list"] });
         if (selectedPck) {
-          queryClient.invalidateQueries({ queryKey: ["phieu-chuyen-kho-details", selectedPck.maPck] });
+          queryClient.invalidateQueries({
+            queryKey: ["phieu-chuyen-kho-details", selectedPck.maPck],
+          });
         }
         setIsDetailOpen(false);
       } else {
@@ -214,7 +197,9 @@ export const PhieuChuyenTab = () => {
         toast.success("Đã hủy phiếu chuyển kho thành công!");
         queryClient.invalidateQueries({ queryKey: ["phieu-chuyen-kho-list"] });
         if (selectedPck) {
-          queryClient.invalidateQueries({ queryKey: ["phieu-chuyen-kho-details", selectedPck.maPck] });
+          queryClient.invalidateQueries({
+            queryKey: ["phieu-chuyen-kho-details", selectedPck.maPck],
+          });
         }
         setIsDetailOpen(false);
       } else {
@@ -229,26 +214,8 @@ export const PhieuChuyenTab = () => {
   // ==================== Helper Functions ====================
 
   const stores: CuaHang[] = storesResponse?.data || [];
-  const rawVariants: SanPhamVariant[] = variantsResponse?.data?.content || [];
-  const variants: TonKhoCuaHang[] = useMemo(() => {
-    return rawVariants.map((v) => ({
-      maCh: Number(sourceStoreId) || 0,
-      tenCh: "",
-      maBienThe: v.maBienThe,
-      sku: v.sku,
-      barcode: v.barcode,
-      maSp: v.maSp,
-      tenSp: v.tenSp,
-      anhSp: null,
-      mauSac: v.mauSac || null,
-      dungLuong: v.dungLuong || null,
-      kichThuoc: v.kichThuoc || null,
-      giaBan: v.giaBan,
-      soLuong: sourceStoreStockMap.get(v.maBienThe) || 0,
-      trangThaiBienThe: v.trangThai || "",
-    }));
-  }, [rawVariants, sourceStoreId, sourceStoreStockMap]);
-  const transfers: PhieuChuyenKhoResponse[] = transfersResponse?.data?.content || [];
+  const transfers: PhieuChuyenKhoResponse[] =
+    transfersResponse?.data?.content || [];
   const pageData = transfersResponse?.data;
   const pckDetails: ChiTietChuyenKhoResponse[] = pckDetailsResponse?.data || [];
 
@@ -258,8 +225,112 @@ export const PhieuChuyenTab = () => {
     setSourceStoreId("");
     setDestStoreId("");
     setNote("");
-    setSelectedItems([]);
-    setVariantSearch("");
+    setRows([{ ...initialRow }]);
+  };
+
+  const handleRowChange = (
+    index: number,
+    field: keyof TransferRowState,
+    value: any,
+  ) => {
+    setRows((prev) =>
+      prev.map((row, idx) =>
+        idx === index
+          ? {
+              ...row,
+              [field]: value,
+            }
+          : row,
+      ),
+    );
+  };
+
+  const handleProductSelect = async (index: number, maSp?: number) => {
+    if (!maSp) {
+      setRows((prev) =>
+        prev.map((row, idx) =>
+          idx === index
+            ? {
+                ...row,
+                maSp: undefined,
+                maBienThe: 0,
+                variants: [],
+                isLoadingVariants: false,
+              }
+            : row,
+        ),
+      );
+      return;
+    }
+
+    setRows((prev) =>
+      prev.map((row, idx) =>
+        idx === index
+          ? {
+              ...row,
+              maSp,
+              maBienThe: 0,
+              variants: [],
+              isLoadingVariants: true,
+            }
+          : row,
+      ),
+    );
+
+    try {
+      const res = await sanPhamService.getSanPhamDetail(maSp);
+      if (res?.success && res.data) {
+        const variants = res.data.variants || [];
+        setRows((prev) =>
+          prev.map((row, idx) =>
+            idx === index
+              ? {
+                  ...row,
+                  variants,
+                  isLoadingVariants: false,
+                }
+              : row,
+          ),
+        );
+      } else {
+        toast.error("Không thể lấy chi tiết sản phẩm");
+        setRows((prev) =>
+          prev.map((row, idx) =>
+            idx === index
+              ? {
+                  ...row,
+                  isLoadingVariants: false,
+                }
+              : row,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching product detail:", error);
+      toast.error("Lỗi khi tải biến thể sản phẩm");
+      setRows((prev) =>
+        prev.map((row, idx) =>
+          idx === index
+            ? {
+                ...row,
+                isLoadingVariants: false,
+              }
+            : row,
+        ),
+      );
+    }
+  };
+
+  const handleAddRow = () => {
+    setRows((prev) => [...prev, { ...initialRow }]);
+  };
+
+  const handleRemoveRow = (index: number) => {
+    if (rows.length === 1) {
+      setRows([{ ...initialRow }]);
+      return;
+    }
+    setRows((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   // Trigger form setup depending on user role
@@ -283,73 +354,72 @@ export const PhieuChuyenTab = () => {
     }
   }, [isCreateOpen, transferType, isAdmin, myStoreId]);
 
-  const handleAddVariant = (v: TonKhoCuaHang) => {
-    // Check if already added
-    if (selectedItems.some((item) => item.variant.maBienThe === v.maBienThe)) {
-      toast.error("Biến thể này đã được thêm vào danh sách!");
-      return;
+  // Old variant selectors and handlers removed as they are replaced by our robust row-based selection.
+
+  const validateForm = () => {
+    if (!sourceStoreId) {
+      toast.error("Vui lòng chọn cửa hàng nguồn!");
+      return false;
     }
-    // Check if store has stock
-    if (v.soLuong <= 0) {
-      toast.error("Biến thể này đã hết hàng ở cửa hàng nguồn!");
-      return;
+    if (!destStoreId) {
+      toast.error("Vui lòng chọn cửa hàng đích!");
+      return false;
+    }
+    if (sourceStoreId === destStoreId) {
+      toast.error("Cửa hàng nguồn và cửa hàng đích không được trùng nhau!");
+      return false;
     }
 
-    setSelectedItems((prev) => [...prev, { variant: v, soLuong: 1 }]);
-    setVariantSearch("");
-    setIsVariantDropdownOpen(false);
-  };
-
-  const handleUpdateQty = (maBienThe: number, qty: number, maxQty: number) => {
-    if (qty <= 0) return;
-    if (qty > maxQty) {
-      toast.error(`Số lượng chuyển không vượt quá tồn kho của nguồn (${maxQty})!`);
-      return;
-    }
-    setSelectedItems((prev) =>
-      prev.map((item) =>
-        item.variant.maBienThe === maBienThe ? { ...item, soLuong: qty } : item
-      )
+    const validRows = rows.filter(
+      (item) => (item.maSp ?? 0) > 0 && item.maBienThe > 0 && item.soLuong > 0,
     );
-  };
 
-  const handleRemoveItem = (maBienThe: number) => {
-    setSelectedItems((prev) =>
-      prev.filter((item) => item.variant.maBienThe !== maBienThe)
+    if (validRows.length === 0) {
+      toast.error("Vui lòng thêm ít nhất một chi tiết chuyển kho!");
+      return false;
+    }
+
+    const invalidRow = rows.find(
+      (item) =>
+        !(item.maSp && item.maSp > 0) ||
+        item.maBienThe <= 0 ||
+        item.soLuong <= 0,
     );
+    if (invalidRow) {
+      if (!invalidRow.maSp || invalidRow.maSp <= 0) {
+        toast.error("Vui lòng chọn sản phẩm cho tất cả các dòng!");
+      } else if (invalidRow.maBienThe <= 0) {
+        toast.error("Vui lòng chọn biến thể cho tất cả các dòng!");
+      } else {
+        toast.error("Số lượng chuyển phải lớn hơn 0!");
+      }
+      return false;
+    }
+
+    // Validate quantities against source store stock
+    for (const item of rows) {
+      const stock = sourceStoreStockMap.get(item.maBienThe) || 0;
+      if (item.soLuong > stock) {
+        const variantName =
+          item.variants.find((v) => v.maBienThe === item.maBienThe)?.sku ||
+          `Mã #${item.maBienThe}`;
+        toast.error(
+          `Sản phẩm "${variantName}" vượt quá số lượng tồn tại kho nguồn (${stock})!`,
+        );
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    if (!sourceStoreId) {
-      toast.error("Vui lòng chọn cửa hàng nguồn!");
-      return;
-    }
-    if (!destStoreId) {
-      toast.error("Vui lòng chọn cửa hàng đích!");
-      return;
-    }
-    if (sourceStoreId === destStoreId) {
-      toast.error("Cửa hàng nguồn và cửa hàng đích không được trùng nhau!");
-      return;
-    }
-    if (selectedItems.length === 0) {
-      toast.error("Vui lòng thêm ít nhất một biến thể sản phẩm cần chuyển!");
-      return;
-    }
-
-    // Validate quantities against source store stock
-    for (const item of selectedItems) {
-      if (item.soLuong > item.variant.soLuong) {
-        toast.error(`Sản phẩm "${item.variant.tenSp}" vượt quá số lượng tồn tại kho nguồn (${item.variant.soLuong})!`);
-        return;
-      }
-    }
-
-    const chiTiet: ChiTietChuyenKhoRequest[] = selectedItems.map((item) => ({
-      maBienThe: item.variant.maBienThe,
-      soLuong: item.soLuong,
+    const chiTiet: ChiTietChuyenKhoRequest[] = rows.map((row) => ({
+      maBienThe: row.maBienThe,
+      soLuong: row.soLuong,
     }));
 
     createMutation.mutate({
@@ -401,6 +471,10 @@ export const PhieuChuyenTab = () => {
     }).format(date);
   };
 
+  if (role === "NhanVienBan") {
+    return null;
+  }
+
   return (
     <div className="flex flex-col gap-6 w-full h-full min-h-0">
       {/* Top Banner and Quick Stats */}
@@ -410,7 +484,9 @@ export const PhieuChuyenTab = () => {
             <FiLoader className="w-6 h-6 animate-spin-slow" />
           </div>
           <div>
-            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Phiếu chờ duyệt</p>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+              Phiếu chờ duyệt
+            </p>
             <p className="text-2xl font-extrabold text-gray-800 mt-0.5">
               {transfers.filter((t) => t.trangThai === "ChoDuyet").length}
             </p>
@@ -422,7 +498,9 @@ export const PhieuChuyenTab = () => {
             <FiCheck className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Đã hoàn thành</p>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+              Đã hoàn thành
+            </p>
             <p className="text-2xl font-extrabold text-gray-800 mt-0.5">
               {transfers.filter((t) => t.trangThai === "DaChuyenKho").length}
             </p>
@@ -447,15 +525,27 @@ export const PhieuChuyenTab = () => {
             <thead className="text-xs text-gray-500 bg-gray-50/70 border-b border-gray-200 uppercase sticky top-0 z-10 backdrop-blur-xs font-bold">
               <tr>
                 <th className="px-6 py-4 font-bold tracking-wider">Mã phiếu</th>
-                <th className="px-6 py-4 font-bold tracking-wider">Kho nguồn (Gửi)</th>
+                <th className="px-6 py-4 font-bold tracking-wider">
+                  Kho nguồn (Gửi)
+                </th>
                 <th className="px-6 py-4 font-bold tracking-wider text-center">
                   <FiArrowRight className="inline text-gray-400" />
                 </th>
-                <th className="px-6 py-4 font-bold tracking-wider">Kho đích (Nhận)</th>
-                <th className="px-6 py-4 font-bold tracking-wider">Người lập</th>
-                <th className="px-6 py-4 font-bold tracking-wider">Ngày chuyển</th>
-                <th className="px-6 py-4 font-bold tracking-wider text-center">Trạng thái</th>
-                <th className="px-6 py-4 font-bold tracking-wider text-center">Thao tác</th>
+                <th className="px-6 py-4 font-bold tracking-wider">
+                  Kho đích (Nhận)
+                </th>
+                <th className="px-6 py-4 font-bold tracking-wider">
+                  Người lập
+                </th>
+                <th className="px-6 py-4 font-bold tracking-wider">
+                  Ngày chuyển
+                </th>
+                <th className="px-6 py-4 font-bold tracking-wider text-center">
+                  Trạng thái
+                </th>
+                <th className="px-6 py-4 font-bold tracking-wider text-center">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -470,16 +560,28 @@ export const PhieuChuyenTab = () => {
                 </tr>
               ) : isTransfersError ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center text-rose-500 font-medium bg-rose-50/50">
-                    Đã xảy ra lỗi khi tải danh sách phiếu chuyển kho! Vui lòng thử lại sau.
+                  <td
+                    colSpan={8}
+                    className="px-6 py-16 text-center text-rose-500 font-medium bg-rose-50/50"
+                  >
+                    Đã xảy ra lỗi khi tải danh sách phiếu chuyển kho! Vui lòng
+                    thử lại sau.
                   </td>
                 </tr>
               ) : transfers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center text-gray-500">
+                  <td
+                    colSpan={8}
+                    className="px-6 py-16 text-center text-gray-500"
+                  >
                     <FiTruck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-base font-bold text-gray-800">Không tìm thấy phiếu chuyển nào</p>
-                    <p className="text-xs text-gray-400 mt-1">Hãy nhấn "Tạo phiếu chuyển kho mới" để bắt đầu luân chuyển hàng hóa.</p>
+                    <p className="text-base font-bold text-gray-800">
+                      Không tìm thấy phiếu chuyển nào
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Hãy nhấn "Tạo phiếu chuyển kho mới" để bắt đầu luân chuyển
+                      hàng hóa.
+                    </p>
                   </td>
                 </tr>
               ) : (
@@ -497,7 +599,9 @@ export const PhieuChuyenTab = () => {
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-800">
                       {item.tenChNguon}
-                      <span className="block text-[10px] text-gray-400 mt-0.5 font-normal">Mã CH: #{item.maChNguon}</span>
+                      <span className="block text-[10px] text-gray-400 mt-0.5 font-normal">
+                        Mã CH: #{item.maChNguon}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="p-1.5 bg-gray-100 text-gray-500 rounded-full inline-block">
@@ -506,11 +610,15 @@ export const PhieuChuyenTab = () => {
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-800">
                       {item.tenChDich}
-                      <span className="block text-[10px] text-gray-400 mt-0.5 font-normal">Mã CH: #{item.maChDich}</span>
+                      <span className="block text-[10px] text-gray-400 mt-0.5 font-normal">
+                        Mã CH: #{item.maChDich}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-gray-600 font-medium">
                       {item.tenNv || "Hệ thống"}
-                      <span className="block text-[10px] text-gray-400 mt-0.5 font-mono">{item.maNv}</span>
+                      <span className="block text-[10px] text-gray-400 mt-0.5 font-mono">
+                        {item.maNv}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-gray-500 text-xs font-medium">
                       {formatDateTime(item.ngayChuyenKho)}
@@ -518,7 +626,10 @@ export const PhieuChuyenTab = () => {
                     <td className="px-6 py-4 text-center whitespace-nowrap">
                       {getStatusBadge(item.trangThai)}
                     </td>
-                    <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="px-6 py-4 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={() => {
                           setSelectedPck(item);
@@ -541,8 +652,14 @@ export const PhieuChuyenTab = () => {
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between shrink-0 bg-gray-50/50">
             <span className="text-sm text-gray-500 font-medium">
               Hiển thị{" "}
-              {pageData.totalElements === 0 ? 0 : currentPage * pageData.size + 1}{" "}
-              đến {Math.min((currentPage + 1) * pageData.size, pageData.totalElements)}{" "}
+              {pageData.totalElements === 0
+                ? 0
+                : currentPage * pageData.size + 1}{" "}
+              đến{" "}
+              {Math.min(
+                (currentPage + 1) * pageData.size,
+                pageData.totalElements,
+              )}{" "}
               trong số {pageData.totalElements} phiếu
             </span>
             <div className="flex gap-1">
@@ -557,7 +674,9 @@ export const PhieuChuyenTab = () => {
               {Array.from({
                 length: Math.ceil(pageData.totalElements / pageData.size),
               }).map((_, idx) => {
-                const totalPages = Math.ceil(pageData.totalElements / pageData.size);
+                const totalPages = Math.ceil(
+                  pageData.totalElements / pageData.size,
+                );
                 if (
                   idx === 0 ||
                   idx === totalPages - 1 ||
@@ -578,7 +697,10 @@ export const PhieuChuyenTab = () => {
                   );
                 } else if (Math.abs(idx - currentPage) === 2) {
                   return (
-                    <span key={idx} className="px-2 py-1 text-gray-400 font-bold self-center">
+                    <span
+                      key={idx}
+                      className="px-2 py-1 text-gray-400 font-bold self-center"
+                    >
                       ...
                     </span>
                   );
@@ -589,7 +711,8 @@ export const PhieuChuyenTab = () => {
               <button
                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-600 bg-white hover:bg-gray-50 transition-colors shadow-2xs disabled:opacity-50 disabled:pointer-events-none"
                 disabled={
-                  currentPage >= Math.ceil(pageData.totalElements / pageData.size) - 1
+                  currentPage >=
+                  Math.ceil(pageData.totalElements / pageData.size) - 1
                 }
                 onClick={() => setCurrentPage(currentPage + 1)}
               >
@@ -603,7 +726,7 @@ export const PhieuChuyenTab = () => {
       {/* ==================== CREATE MODAL ==================== */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-100 transform scale-100 transition-all duration-300 overflow-hidden my-8">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-gray-100 transform scale-100 transition-all duration-300 overflow-hidden my-8">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-linear-to-r from-gray-50 to-white">
               <div className="flex items-center gap-2.5">
@@ -615,7 +738,8 @@ export const PhieuChuyenTab = () => {
                     Tạo Phiếu Chuyển Kho Mới
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Lập phiếu luân chuyển hàng hóa giữa các kho chi nhánh trong hệ thống
+                    Lập phiếu luân chuyển hàng hóa giữa các kho chi nhánh trong
+                    hệ thống
                   </p>
                 </div>
               </div>
@@ -631,8 +755,10 @@ export const PhieuChuyenTab = () => {
             </div>
 
             {/* Form Body */}
-            <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-6 space-y-6">
-              
+            <form
+              onSubmit={handleSubmit}
+              className="overflow-y-auto flex-1 p-6 space-y-6"
+            >
               {/* Step 1: Role-based Store Configuration */}
               <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100/50 flex flex-col gap-4">
                 <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
@@ -642,73 +768,155 @@ export const PhieuChuyenTab = () => {
 
                 {!isAdmin ? (
                   /* Employee / Manager view: Locked to their own store. Choose Transfer direction */
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
                         Hướng chuyển hàng
                       </label>
                       <select
                         value={transferType}
-                        onChange={(e) => setTransferType(e.target.value as "send" | "receive")}
+                        onChange={(e) =>
+                          setTransferType(e.target.value as "send" | "receive")
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-semibold text-gray-800 shadow-2xs"
                       >
-                        <option value="send">Chuyển hàng đi (Từ cửa hàng của tôi)</option>
-                        <option value="receive">Nhận hàng về (Về cửa hàng của tôi)</option>
+                        <option value="send">
+                          Chuyển hàng đi (Từ cửa hàng của tôi)
+                        </option>
+                        <option value="receive">
+                          Nhận hàng về (Về cửa hàng của tôi)
+                        </option>
                       </select>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                        Cửa hàng nguồn (Từ)
-                      </label>
-                      {transferType === "send" ? (
-                        <div className="px-3 py-2 border border-gray-200 bg-gray-50 text-gray-600 rounded-lg text-sm font-semibold">
-                          Cửa hàng của tôi (Mặc định)
-                        </div>
-                      ) : (
-                        <select
-                          value={sourceStoreId}
-                          onChange={(e) => setSourceStoreId(Number(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm shadow-2xs"
-                          required
-                        >
-                          <option value="">-- Chọn cửa hàng nguồn --</option>
-                          {stores
-                            .filter((st) => st.maCh !== myStoreId && st.trangThai === "HoatDong")
-                            .map((st) => (
-                              <option key={st.maCh} value={st.maCh}>
-                                {st.tenCh} (Mã: #{st.maCh})
-                              </option>
-                            ))}
-                        </select>
-                      )}
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                          Cửa hàng nguồn (Từ)
+                        </label>
+                        {transferType === "send" ? (
+                          (() => {
+                            const myStore = stores.find(
+                              (st) => st.maCh === myStoreId,
+                            );
+                            if (myStore) {
+                              return (
+                                <div className="px-3 py-2 border border-gray-200 bg-gray-50 text-sm text-gray-700 rounded-lg space-y-1 shadow-xs">
+                                  <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                                    </span>
+                                    {myStore.tenCh}{" "}
+                                    <span className="text-gray-400 font-normal text-xs">
+                                      (Mã: #{myStore.maCh})
+                                    </span>
+                                  </div>
+                                  {myStore.diaChi && (
+                                    <p className="text-[10px] text-gray-500 leading-normal">
+                                      <span className="font-medium text-gray-600">
+                                        Địa chỉ:
+                                      </span>{" "}
+                                      {myStore.diaChi}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="px-3 py-2 border border-gray-200 bg-gray-50 text-gray-600 rounded-lg text-sm font-semibold">
+                                Cửa hàng của tôi (Mã: #{myStoreId})
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <select
+                            value={sourceStoreId}
+                            onChange={(e) =>
+                              setSourceStoreId(Number(e.target.value))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm shadow-2xs"
+                            required
+                          >
+                            <option value="">-- Chọn cửa hàng nguồn --</option>
+                            {stores
+                              .filter(
+                                (st) =>
+                                  st.maCh !== myStoreId &&
+                                  st.trangThai === "HoatDong",
+                              )
+                              .map((st) => (
+                                <option key={st.maCh} value={st.maCh}>
+                                  {st.tenCh} (Mã: #{st.maCh})
+                                </option>
+                              ))}
+                          </select>
+                        )}
+                      </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                        Cửa hàng đích (Đến)
-                      </label>
-                      {transferType === "receive" ? (
-                        <div className="px-3 py-2 border border-gray-200 bg-gray-50 text-gray-600 rounded-lg text-sm font-semibold">
-                          Cửa hàng của tôi (Mặc định)
-                        </div>
-                      ) : (
-                        <select
-                          value={destStoreId}
-                          onChange={(e) => setDestStoreId(Number(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm shadow-2xs"
-                          required
-                        >
-                          <option value="">-- Chọn cửa hàng đích --</option>
-                          {stores
-                            .filter((st) => st.maCh !== myStoreId && st.trangThai === "HoatDong")
-                            .map((st) => (
-                              <option key={st.maCh} value={st.maCh}>
-                                {st.tenCh} (Mã: #{st.maCh})
-                              </option>
-                            ))}
-                        </select>
-                      )}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                          Cửa hàng đích (Đến)
+                        </label>
+                        {transferType === "receive" ? (
+                          (() => {
+                            const myStore = stores.find(
+                              (st) => st.maCh === myStoreId,
+                            );
+                            if (myStore) {
+                              return (
+                                <div className="px-3 py-2 border border-gray-200 bg-gray-50 text-sm text-gray-700 rounded-lg space-y-1 shadow-xs">
+                                  <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                                    </span>
+                                    {myStore.tenCh}{" "}
+                                    <span className="text-gray-400 font-normal text-xs">
+                                      (Mã: #{myStore.maCh})
+                                    </span>
+                                  </div>
+                                  {myStore.diaChi && (
+                                    <p className="text-[10px] text-gray-500 leading-normal">
+                                      <span className="font-medium text-gray-600">
+                                        Địa chỉ:
+                                      </span>{" "}
+                                      {myStore.diaChi}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="px-3 py-2 border border-gray-200 bg-gray-50 text-gray-600 rounded-lg text-sm font-semibold">
+                                Cửa hàng của tôi (Mã: #{myStoreId})
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <select
+                            value={destStoreId}
+                            onChange={(e) =>
+                              setDestStoreId(Number(e.target.value))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm shadow-2xs"
+                            required
+                          >
+                            <option value="">-- Chọn cửa hàng đích --</option>
+                            {stores
+                              .filter(
+                                (st) =>
+                                  st.maCh !== myStoreId &&
+                                  st.trangThai === "HoatDong",
+                              )
+                              .map((st) => (
+                                <option key={st.maCh} value={st.maCh}>
+                                  {st.tenCh} (Mã: #{st.maCh})
+                                </option>
+                              ))}
+                          </select>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -720,13 +928,19 @@ export const PhieuChuyenTab = () => {
                       </label>
                       <select
                         value={sourceStoreId}
-                        onChange={(e) => setSourceStoreId(Number(e.target.value))}
+                        onChange={(e) =>
+                          setSourceStoreId(Number(e.target.value))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm shadow-2xs"
                         required
                       >
                         <option value="">-- Chọn cửa hàng nguồn --</option>
                         {stores
-                          .filter((st) => st.trangThai === "HoatDong" && st.maCh !== destStoreId)
+                          .filter(
+                            (st) =>
+                              st.trangThai === "HoatDong" &&
+                              st.maCh !== destStoreId,
+                          )
                           .map((st) => (
                             <option key={st.maCh} value={st.maCh}>
                               {st.tenCh} (Mã: #{st.maCh})
@@ -747,7 +961,11 @@ export const PhieuChuyenTab = () => {
                       >
                         <option value="">-- Chọn cửa hàng đích --</option>
                         {stores
-                          .filter((st) => st.trangThai === "HoatDong" && st.maCh !== sourceStoreId)
+                          .filter(
+                            (st) =>
+                              st.trangThai === "HoatDong" &&
+                              st.maCh !== sourceStoreId,
+                          )
                           .map((st) => (
                             <option key={st.maCh} value={st.maCh}>
                               {st.tenCh} (Mã: #{st.maCh})
@@ -759,179 +977,158 @@ export const PhieuChuyenTab = () => {
                 )}
               </div>
 
-              {/* Step 2: Search & Add Product Variants */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex justify-between items-center">
-                  <span>Tìm & chọn biến thể sản phẩm cần chuyển</span>
-                  {!sourceStoreId && (
-                    <span className="text-rose-500 normal-case font-semibold text-[11px] animate-pulse">
-                      * Vui lòng chọn cửa hàng nguồn trước để hiển thị sản phẩm tương ứng!
-                    </span>
-                  )}
-                </label>
+              {/* Step 2 & 3: Product Variants & Selection in 2x2 grid card */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                    Danh sách sản phẩm chuyển đi
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleAddRow}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  >
+                    <FiPlus size={14} />
+                    Thêm dòng
+                  </button>
+                </div>
 
-                <div ref={variantSearchRef} className="relative w-full">
-                  <div className="relative">
-                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder={
-                        sourceStoreId
-                          ? "Tìm biến thể theo tên, SKU, barcode, màu sắc..."
-                          : "Vui lòng chọn cửa hàng nguồn phía trên trước..."
-                      }
-                      disabled={!sourceStoreId}
-                      className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
-                      value={variantSearch}
-                      onChange={(e) => {
-                        setVariantSearch(e.target.value);
-                        setIsVariantDropdownOpen(true);
-                      }}
-                      onFocus={() => setIsVariantDropdownOpen(true)}
-                    />
-                    {variantSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setVariantSearch("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                <div className="grid grid-cols-1 gap-4">
+                  {rows.map((item, index) => {
+                    const stock = item.maBienThe
+                      ? sourceStoreStockMap.get(item.maBienThe) || 0
+                      : 0;
+
+                    return (
+                      <div
+                        key={index}
+                        className="relative p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow"
                       >
-                        <FiX size={16} />
-                      </button>
-                    )}
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRow(index)}
+                          className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                          aria-label="Xóa dòng"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
 
-                  {/* Dropdown variants search result */}
-                  {isVariantDropdownOpen && sourceStoreId && (
-                    <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar flex flex-col">
-                      {isVariantsLoading ? (
-                        <div className="px-4 py-6 text-center text-gray-400 flex items-center justify-center gap-2">
-                          <FiLoader className="w-5 h-5 animate-spin text-blue-500" />
-                          <span className="text-sm">Đang tải sản phẩm từ kho nguồn...</span>
-                        </div>
-                      ) : variants.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-sm text-gray-400">
-                          Không tìm thấy biến thể nào trong cửa hàng nguồn.
-                        </div>
-                      ) : (
-                        variants.map((v) => (
-                          <div
-                            key={v.maBienThe}
-                            onClick={() => handleAddVariant(v)}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50/50 cursor-pointer border-b border-gray-50 last:border-none transition-colors"
-                          >
-                            <div className="w-9 h-9 bg-gray-50 rounded border border-gray-100 shrink-0 overflow-hidden flex items-center justify-center">
-                              {v.anhSp ? (
-                                <img src={v.anhSp} alt={v.tenSp} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-[10px] text-gray-400">Ảnh</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-8">
+                          <div className="flex flex-col gap-1.5 min-w-0">
+                            <label className="text-sm font-medium text-gray-700">
+                              Sản phẩm
+                            </label>
+                            <ProductSelect
+                              selectedId={item.maSp}
+                              onChange={(id) => handleProductSelect(index, id)}
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-medium text-gray-700">
+                              Biến thể
+                            </label>
+                            <select
+                              value={item.maBienThe}
+                              onChange={(e) => {
+                                const maBt = Number(e.target.value);
+                                handleRowChange(index, "maBienThe", maBt);
+                                handleRowChange(index, "soLuong", 1);
+                              }}
+                              disabled={
+                                item.isLoadingVariants ||
+                                !sourceStoreId ||
+                                !item.maSp ||
+                                item.variants.length === 0
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                            >
+                              <option value={0}>
+                                {!sourceStoreId
+                                  ? "Chọn cửa hàng nguồn trước"
+                                  : item.isLoadingVariants
+                                    ? "Đang tải biến thể..."
+                                    : !item.maSp
+                                      ? "Chọn sản phẩm trước"
+                                      : item.variants.length === 0
+                                        ? "Không có biến thể"
+                                        : "Chọn biến thể..."}
+                              </option>
+                              {item.variants.map((variant) => {
+                                const variantStock =
+                                  sourceStoreStockMap.get(variant.maBienThe) ||
+                                  0;
+                                return (
+                                  <option
+                                    key={variant.maBienThe}
+                                    value={variant.maBienThe}
+                                  >
+                                    {variant.sku}{" "}
+                                    {variant.mauSac
+                                      ? `| ${variant.mauSac}`
+                                      : ""}{" "}
+                                    {variant.dungLuong
+                                      ? `| ${variant.dungLuong}`
+                                      : ""}{" "}
+                                    (
+                                    {variantStock > 0
+                                      ? `Tồn: ${variantStock}`
+                                      : "Hết hàng"}
+                                    )
+                                  </option>
+                                );
+                              })}
+                            </select>
+                            {!sourceStoreId && (
+                              <p className="text-xs text-red-500 mt-0.5">
+                                Vui lòng chọn cửa hàng nguồn trước.
+                              </p>
+                            )}
+                            {sourceStoreId && !item.maSp && (
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                Vui lòng chọn sản phẩm trước.
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col gap-1.5 md:col-span-2">
+                            <div className="flex justify-between items-center">
+                              <label className="text-sm font-medium text-gray-700">
+                                Số lượng chuyển
+                              </label>
+                              {item.maBienThe > 0 && (
+                                <span className="text-xs font-semibold text-emerald-600">
+                                  Khả dụng: {stock} sản phẩm
+                                </span>
                               )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-800 text-sm truncate">{v.tenSp}</p>
-                              <div className="flex gap-2 text-[10px] text-gray-400 font-medium mt-0.5">
-                                <span>SKU: {v.sku}</span>
-                                {v.mauSac && <span>| Màu: {v.mauSac}</span>}
-                                {v.dungLuong && <span>| Dung lượng: {v.dungLuong}</span>}
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span
-                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                  v.soLuong > 0
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                    : "bg-rose-50 text-rose-700 border border-rose-100"
-                                }`}
-                              >
-                                Tồn kho: {v.soLuong}
-                              </span>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 3: Selected items list table */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Danh sách biến thể chuyển đi</h4>
-                
-                <div className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Ảnh</th>
-                        <th className="px-4 py-3 font-semibold">Sản phẩm</th>
-                        <th className="px-4 py-3 font-semibold">SKU</th>
-                        <th className="px-4 py-3 font-semibold text-center">Tồn tại kho nguồn</th>
-                        <th className="px-4 py-3 font-semibold text-center w-[120px]">Số lượng chuyển</th>
-                        <th className="px-4 py-3 font-semibold text-center">Xóa</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {selectedItems.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-400 font-medium">
-                            Chưa chọn sản phẩm nào. Hãy tìm kiếm biến thể phía trên để thêm vào phiếu.
-                          </td>
-                        </tr>
-                      ) : (
-                        selectedItems.map((item) => (
-                          <tr key={item.variant.maBienThe} className="hover:bg-gray-50/50">
-                            <td className="px-4 py-3">
-                              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center">
-                                {item.variant.anhSp ? (
-                                  <img src={item.variant.anhSp} alt={item.variant.tenSp} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="text-[10px] text-gray-400">Ảnh</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <p className="font-semibold text-gray-900">{item.variant.tenSp}</p>
-                              <div className="flex gap-2 text-[10px] text-gray-400 mt-0.5">
-                                {item.variant.mauSac && <span>Màu: {item.variant.mauSac}</span>}
-                                {item.variant.dungLuong && <span>Dung lượng: {item.variant.dungLuong}</span>}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 font-mono text-xs text-gray-700">
-                              {item.variant.sku}
-                            </td>
-                            <td className="px-4 py-3 text-center font-bold text-emerald-600">
-                              {item.variant.soLuong}
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                min={1}
-                                max={item.variant.soLuong}
-                                value={item.soLuong}
-                                onChange={(e) =>
-                                  handleUpdateQty(
-                                    item.variant.maBienThe,
-                                    Number(e.target.value),
-                                    item.variant.soLuong
-                                  )
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={stock || 1}
+                              step={1}
+                              value={item.soLuong || ""}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                if (val > stock) {
+                                  toast.error(
+                                    `Số lượng chuyển không vượt quá tồn kho nguồn (${stock})!`,
+                                  );
+                                  handleRowChange(index, "soLuong", stock);
+                                } else {
+                                  handleRowChange(index, "soLuong", val);
                                 }
-                                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-center font-semibold text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
-                                required
-                              />
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(item.variant.maBienThe)}
-                                className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
-                              >
-                                <FiTrash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                              }}
+                              disabled={!item.maBienThe}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                              placeholder="Số lượng"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1016,16 +1213,20 @@ export const PhieuChuyenTab = () => {
 
             {/* Modal Body */}
             <div className="overflow-y-auto flex-1 p-6 space-y-6">
-              
               {/* Slip Metadata and Route Map */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
                 {/* Source -> Dest Visual Card */}
                 <div className="md:col-span-2 bg-linear-to-br from-indigo-50/50 via-blue-50/20 to-transparent p-5 rounded-2xl border border-indigo-100/50 flex items-center justify-between gap-4 shadow-2xs">
                   <div className="flex-1">
-                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">KHO NGUỒN (GỬI)</span>
-                    <h4 className="font-extrabold text-gray-800 text-sm">{selectedPck.tenChNguon}</h4>
-                    <span className="text-xs text-gray-400 font-medium">Mã CH: #{selectedPck.maChNguon}</span>
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">
+                      KHO NGUỒN (GỬI)
+                    </span>
+                    <h4 className="font-extrabold text-gray-800 text-sm">
+                      {selectedPck.tenChNguon}
+                    </h4>
+                    <span className="text-xs text-gray-400 font-medium">
+                      Mã CH: #{selectedPck.maChNguon}
+                    </span>
                   </div>
 
                   <div className="flex flex-col items-center gap-1.5 shrink-0 px-2">
@@ -1036,27 +1237,47 @@ export const PhieuChuyenTab = () => {
                   </div>
 
                   <div className="flex-1 text-right">
-                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">KHO ĐÍCH (NHẬN)</span>
-                    <h4 className="font-extrabold text-gray-800 text-sm">{selectedPck.tenChDich}</h4>
-                    <span className="text-xs text-gray-400 font-medium">Mã CH: #{selectedPck.maChDich}</span>
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">
+                      KHO ĐÍCH (NHẬN)
+                    </span>
+                    <h4 className="font-extrabold text-gray-800 text-sm">
+                      {selectedPck.tenChDich}
+                    </h4>
+                    <span className="text-xs text-gray-400 font-medium">
+                      Mã CH: #{selectedPck.maChDich}
+                    </span>
                   </div>
                 </div>
 
                 {/* Status and Info Block */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs flex flex-col justify-between gap-3">
                   <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">Trạng thái phiếu</span>
-                    <div className="mt-1.5">{getStatusBadge(selectedPck.trangThai)}</div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
+                      Trạng thái phiếu
+                    </span>
+                    <div className="mt-1.5">
+                      {getStatusBadge(selectedPck.trangThai)}
+                    </div>
                   </div>
 
                   <div className="border-t border-gray-100 pt-3 flex flex-col gap-1.5 text-xs text-gray-500">
                     <div className="flex items-center gap-2">
                       <FiCalendar className="shrink-0 text-gray-400" />
-                      <span>Ngày: <strong className="text-gray-700">{formatDateTime(selectedPck.ngayChuyenKho)}</strong></span>
+                      <span>
+                        Ngày:{" "}
+                        <strong className="text-gray-700">
+                          {formatDateTime(selectedPck.ngayChuyenKho)}
+                        </strong>
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <FiUser className="shrink-0 text-gray-400" />
-                      <span>Lập bởi: <strong className="text-gray-700">{selectedPck.tenNv || "Hệ thống"}</strong></span>
+                      <span>
+                        Lập bởi:{" "}
+                        <strong className="text-gray-700">
+                          {selectedPck.tenNv || "Hệ thống"}
+                        </strong>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1077,7 +1298,9 @@ export const PhieuChuyenTab = () => {
                         <th className="px-6 py-3">Tên sản phẩm</th>
                         <th className="px-6 py-3">SKU</th>
                         <th className="px-6 py-3">Thuộc tính</th>
-                        <th className="px-6 py-3 text-center">Số lượng chuyển</th>
+                        <th className="px-6 py-3 text-center">
+                          Số lượng chuyển
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white font-medium text-gray-700">
@@ -1085,18 +1308,26 @@ export const PhieuChuyenTab = () => {
                         <tr>
                           <td colSpan={5} className="px-6 py-12 text-center">
                             <FiLoader className="animate-spin text-2xl text-blue-600 mx-auto" />
-                            <p className="text-xs text-gray-400 mt-2">Đang tải sản phẩm chi tiết...</p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              Đang tải sản phẩm chi tiết...
+                            </p>
                           </td>
                         </tr>
                       ) : pckDetails.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                          <td
+                            colSpan={5}
+                            className="px-6 py-8 text-center text-gray-400"
+                          >
                             Không có sản phẩm nào trong chi tiết phiếu chuyển.
                           </td>
                         </tr>
                       ) : (
                         pckDetails.map((dt) => (
-                          <tr key={dt.maBienThe} className="hover:bg-gray-50/30">
+                          <tr
+                            key={dt.maBienThe}
+                            className="hover:bg-gray-50/30"
+                          >
                             <td className="px-6 py-4 font-bold text-gray-500 text-xs">
                               #{dt.maBienThe}
                             </td>
@@ -1108,8 +1339,17 @@ export const PhieuChuyenTab = () => {
                             </td>
                             <td className="px-6 py-4 text-xs text-gray-500">
                               <div className="flex gap-2">
-                                {dt.mauSac && <span>Màu: <strong>{dt.mauSac}</strong></span>}
-                                {dt.dungLuong && <span>| Dung lượng: <strong>{dt.dungLuong}</strong></span>}
+                                {dt.mauSac && (
+                                  <span>
+                                    Màu: <strong>{dt.mauSac}</strong>
+                                  </span>
+                                )}
+                                {dt.dungLuong && (
+                                  <span>
+                                    | Dung lượng:{" "}
+                                    <strong>{dt.dungLuong}</strong>
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center font-extrabold text-blue-600 text-base">
@@ -1125,7 +1365,9 @@ export const PhieuChuyenTab = () => {
 
               {/* Note view */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Ghi chú phiếu chuyển</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                  Ghi chú phiếu chuyển
+                </span>
                 <p className="text-sm text-gray-700 mt-1 font-medium italic">
                   {selectedPck.ghiChu || "Không có ghi chú nào đi kèm."}
                 </p>
@@ -1134,13 +1376,14 @@ export const PhieuChuyenTab = () => {
 
             {/* Modal Footer & Actions */}
             <div className="px-6 py-4 border-t border-gray-200 flex flex-wrap gap-3 justify-between items-center bg-gray-50 shrink-0">
-              
               {/* Message alerts */}
               <div className="text-xs text-gray-500 font-medium">
                 {selectedPck.trangThai === "ChoDuyet" && (
                   <span className="flex items-center gap-1.5 text-amber-600">
                     <FiAlertCircle />
-                    Phiếu này đang chờ được duyệt để thực hiện cập nhật kho hàng.
+                    {role === "NhanVienKho"
+                      ? "Phiếu này đang chờ được Quản lý cửa hàng hoặc Admin duyệt."
+                      : "Phiếu này đang chờ được duyệt để thực hiện cập nhật kho hàng."}
                   </span>
                 )}
               </div>
@@ -1174,20 +1417,22 @@ export const PhieuChuyenTab = () => {
                       )}
                     </button>
 
-                    <button
-                      onClick={() => approveMutation.mutate(selectedPck.maPck)}
-                      disabled={approveMutation.isPending}
-                      className="px-5 py-2 text-sm font-semibold text-white bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all disabled:opacity-50 flex items-center gap-1.5"
-                    >
-                      {approveMutation.isPending ? (
-                        <FiLoader className="animate-spin" />
-                      ) : (
-                        <>
-                          <FiCheck />
-                          <span>Duyệt chuyển kho</span>
-                        </>
-                      )}
-                    </button>
+                    {role !== "NhanVienKho" && (
+                      <button
+                        onClick={() => approveMutation.mutate(selectedPck.maPck)}
+                        disabled={approveMutation.isPending}
+                        className="px-5 py-2 text-sm font-semibold text-white bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {approveMutation.isPending ? (
+                          <FiLoader className="animate-spin" />
+                        ) : (
+                          <>
+                            <FiCheck />
+                            <span>Duyệt chuyển kho</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </>
                 )}
               </div>

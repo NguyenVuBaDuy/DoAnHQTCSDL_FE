@@ -19,6 +19,7 @@ import type { GetTonKhoParams } from "../../../types/ton-kho";
 import { useGetCuaHangs } from "../../cua-hang/hooks/useCuaHang";
 import { ChiTietBienTheModal } from "../components/ChiTietBienTheModal";
 import { CreatePhieuNhapModal } from "../components/CreatePhieuNhapModal";
+import { ChiTietPhieuNhapModal } from "../components/ChiTietPhieuNhapModal";
 import { ProductSelect } from "../components/ProductSelect";
 import { PhieuChuyenTab } from "../components/PhieuChuyenTab";
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -30,21 +31,20 @@ const TonKhoPage = () => {
   const [selectedMaBienThe, setSelectedMaBienThe] = useState<number | null>(
     null,
   );
+  const [selectedMaPn, setSelectedMaPn] = useState<number | null>(null);
 
   const { user } = useAppSelector((state) => state.auth);
   const role = user?.tennhom;
-  const maCh = user?.nhanvien?.mach;
+  const maCh = user?.nhanvien?.mach ?? (user as any)?.mach;
 
-  const isStoreRole =
-    role === "QuanLyCuaHang" ||
-    role === "NhanVienKho" ||
-    role === "NhanVienBan";
+  const isStoreRole = role !== "Admin";
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { data: cuaHangsResponse, isLoading: isCuaHangsLoading } =
     useGetCuaHangs();
   const cuaHangs = cuaHangsResponse?.data || [];
-  const canCreatePhieuNhap = role === "Admin" || isStoreRole;
+  const canCreatePhieuNhap =
+    (role === "Admin" || isStoreRole) && role !== "NhanVienBan";
 
   const [params, setParams] = useState<GetTonKhoParams>({
     page: 0,
@@ -78,8 +78,11 @@ const TonKhoPage = () => {
   } = useQuery<any>({
     queryKey: ["ton-kho-tong-quan", params, role, maCh],
     queryFn: () => {
-      if (isStoreRole && maCh !== undefined && maCh !== null) {
-        return tonKhoService.getTonKhoCuaHang(maCh, params);
+      if (isStoreRole) {
+        if (maCh !== undefined && maCh !== null) {
+          return tonKhoService.getTonKhoCuaHang(maCh, params);
+        }
+        throw new Error("Không xác định được cửa hàng.");
       }
       return tonKhoService.getTonKhoTongQuan(params);
     },
@@ -95,7 +98,7 @@ const TonKhoPage = () => {
   } = useQuery<any>({
     queryKey: ["phieu-nhap", phieuNhapParams],
     queryFn: () => phieuNhapService.getPhieuNhaps(phieuNhapParams),
-    enabled: activeTab === "phieu-nhap",
+    enabled: activeTab === "phieu-nhap" && role !== "NhanVienBan",
   });
 
   const tonKhos = response?.data?.content || [];
@@ -228,26 +231,30 @@ const TonKhoPage = () => {
         >
           Tổng quan tồn kho
         </button>
-        <button
-          onClick={() => setActiveTab("phieu-nhap")}
-          className={`px-4 py-2.5 font-medium text-sm border-b-2 transition-all ${
-            activeTab === "phieu-nhap"
-              ? "border-blue-600 text-blue-600 font-semibold"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-          }`}
-        >
-          Phiếu nhập hàng
-        </button>
-        <button
-          onClick={() => setActiveTab("phieu-chuyen")}
-          className={`px-4 py-2.5 font-medium text-sm border-b-2 transition-all ${
-            activeTab === "phieu-chuyen"
-              ? "border-blue-600 text-blue-600 font-semibold"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-          }`}
-        >
-          Phiếu chuyển kho
-        </button>
+        {role !== "NhanVienBan" && (
+          <button
+            onClick={() => setActiveTab("phieu-nhap")}
+            className={`px-4 py-2.5 font-medium text-sm border-b-2 transition-all ${
+              activeTab === "phieu-nhap"
+                ? "border-blue-600 text-blue-600 font-semibold"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Phiếu nhập hàng
+          </button>
+        )}
+        {role !== "NhanVienBan" && (
+          <button
+            onClick={() => setActiveTab("phieu-chuyen")}
+            className={`px-4 py-2.5 font-medium text-sm border-b-2 transition-all ${
+              activeTab === "phieu-chuyen"
+                ? "border-blue-600 text-blue-600 font-semibold"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Phiếu chuyển kho
+          </button>
+        )}
       </div>
 
       {activeTab === "tong-quan" && (
@@ -549,7 +556,7 @@ const TonKhoPage = () => {
         </>
       )}
 
-      {activeTab === "phieu-nhap" && (
+      {activeTab === "phieu-nhap" && role !== "NhanVienBan" && (
         <>
           <div className="flex justify-between items-center shrink-0">
             <div>
@@ -650,12 +657,15 @@ const TonKhoPage = () => {
                     <th className="px-6 py-4 font-medium whitespace-nowrap text-center">
                       Trạng thái
                     </th>
+                    <th className="px-6 py-4 font-medium whitespace-nowrap text-center">
+                      Thao tác
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {isPhieuNhapLoading ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center">
+                      <td colSpan={8} className="px-6 py-12 text-center">
                         <FiLoader className="animate-spin text-2xl text-blue-500 mx-auto" />
                         <div className="text-sm text-gray-500 mt-2">
                           Đang tải dữ liệu phiếu nhập...
@@ -665,7 +675,7 @@ const TonKhoPage = () => {
                   ) : isPhieuNhapError ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-6 py-12 text-center text-red-500 font-medium"
                       >
                         Đã xảy ra lỗi khi tải dữ liệu phiếu nhập!
@@ -674,7 +684,7 @@ const TonKhoPage = () => {
                   ) : filteredPhieuNhaps.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-6 py-12 text-center text-gray-500"
                       >
                         Không tìm thấy phiếu nhập nào.
@@ -684,7 +694,8 @@ const TonKhoPage = () => {
                     filteredPhieuNhaps.map((item: PhieuNhapResponse) => (
                       <tr
                         key={item.maPn}
-                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                        onClick={() => setSelectedMaPn(item.maPn)}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
                       >
                         <td className="px-6 py-4 font-medium text-gray-900">
                           {item.maPn}
@@ -710,6 +721,17 @@ const TonKhoPage = () => {
                         </td>
                         <td className="px-6 py-4 text-center whitespace-nowrap">
                           {getPhieuNhapStatusBadge(item.trangThai || "")}
+                        </td>
+                        <td
+                          className="px-6 py-4 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => setSelectedMaPn(item.maPn)}
+                            className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 hover:border-blue-300 rounded-lg shadow-2xs transition-all"
+                          >
+                            Chi tiết
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -790,7 +812,7 @@ const TonKhoPage = () => {
         </>
       )}
 
-      {activeTab === "phieu-chuyen" && <PhieuChuyenTab />}
+      {activeTab === "phieu-chuyen" && role !== "NhanVienBan" && <PhieuChuyenTab />}
 
       {role === "Admin" && (
         <ChiTietBienTheModal
@@ -808,6 +830,13 @@ const TonKhoPage = () => {
         userStoreId={maCh}
         cuaHangs={cuaHangs}
         isCuaHangsLoading={isCuaHangsLoading}
+      />
+
+      <ChiTietPhieuNhapModal
+        isOpen={selectedMaPn !== null}
+        onClose={() => setSelectedMaPn(null)}
+        maPn={selectedMaPn}
+        role={role}
       />
     </div>
   );

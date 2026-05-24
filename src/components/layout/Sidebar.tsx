@@ -31,7 +31,7 @@ const mainNavItems = [
 const Sidebar = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
-  const role = user?.tennhom;
+  const role = user?.tennhom || user?.nhanvien?.chucvu;
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -56,17 +56,33 @@ const Sidebar = () => {
       <nav className="flex-1 overflow-y-auto px-4 space-y-1">
         {mainNavItems
           .filter((item) => {
+            if (!role) return false;
+            if (item.to === "/dashboard") {
+              return role === "Admin" || role === "QuanLyCuaHang" || role === "NhanVienBan";
+            }
             if (item.to === "/stores") {
               return role === "Admin";
             }
             if (item.to === "/employees") {
-              return role !== "NhanVienBan" && role !== "NhanVienKho";
+              return role === "Admin" || role === "QuanLyCuaHang";
+            }
+            if (item.to === "/products") {
+              return role === "Admin" || role === "QuanLyCuaHang" || role === "NhanVienBan";
+            }
+            if (item.to === "/invoices") {
+              return role === "Admin" || role === "QuanLyCuaHang" || role === "NhanVienBan";
             }
             if (item.to === "/customers") {
               return role === "Admin";
             }
             if (item.to === "/suppliers") {
               return role === "Admin";
+            }
+            if (item.to === "/vouchers") {
+              return role === "Admin" || role === "QuanLyCuaHang" || role === "NhanVienBan";
+            }
+            if (item.to === "/reports") {
+              return role === "Admin" || role === "QuanLyCuaHang";
             }
             return true;
           })

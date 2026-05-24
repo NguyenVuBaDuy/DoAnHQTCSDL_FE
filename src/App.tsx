@@ -46,6 +46,7 @@ function App() {
           <Route element={<RoleProtectedRoute allowedRoles={['Admin', 'QuanLyCuaHang']} />}>
             <Route element={<MainLayout />}>
               <Route path="/employees" element={<NhanVienListPage />} />
+              <Route path="/reports" element={<BaoCaoPage />} />
             </Route>
           </Route>
 
@@ -57,17 +58,22 @@ function App() {
               <Route path="/suppliers" element={<NhaCungCapPage />} />
             </Route>
           </Route>
+          {/* Products, Invoices, Vouchers protected routes with layout */}
+          <Route element={<RoleProtectedRoute allowedRoles={['Admin', 'QuanLyCuaHang', 'NhanVienBan']} />}>
+            <Route element={<MainLayout />}>
+              <Route path="/products" element={<SanPhamPage />} />
+              <Route path="/products/create" element={<SanPhamCreatePage />} />
+              <Route path="/products/edit/:maSp" element={<SanPhamUpdatePage />} />
+              <Route path="/products/detail/:maSp" element={<SanPhamDetailPage />} />
+              <Route path="/invoices" element={<HoaDonPage />} />
+              <Route path="/vouchers" element={<VoucherPage />} />
+            </Route>
+          </Route>
+
           {/* Standard protected routes with layout */}
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/products" element={<SanPhamPage />} />
-            <Route path="/products/create" element={<SanPhamCreatePage />} />
-            <Route path="/products/edit/:maSp" element={<SanPhamUpdatePage />} />
-            <Route path="/products/detail/:maSp" element={<SanPhamDetailPage />} />
             <Route path="/inventory" element={<TonKhoPage />} />
-            <Route path="/invoices" element={<HoaDonPage />} />
-            <Route path="/vouchers" element={<VoucherPage />} />
-            <Route path="/reports" element={<BaoCaoPage />} />
             <Route path="/settings" element={<CaiDatPage />} />
           </Route>
         </Route>

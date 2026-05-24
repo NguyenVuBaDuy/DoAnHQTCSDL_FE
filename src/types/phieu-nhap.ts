@@ -29,3 +29,16 @@ export interface PhieuNhapResponse {
   ghiChu?: string;
   trangThai?: string;
 }
+
+export interface ChiTietPhieuNhapResponse {
+  maPn: number;
+  maBienThe: number;
+  sku?: string;
+  tenSp?: string;
+  mauSac?: string;
+  dungLuong?: string;
+  kichThuoc?: string;
+  soLuong: number;
+  donGia: number;
+  thanhTien: number;
+}

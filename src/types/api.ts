@@ -3,6 +3,8 @@ export interface PageResponse<T> {
   page: number;
   size: number;
   totalElements: number;
+  soTaiKhoanHoatDong?: number;
+  soTaiKhoanBiKhoa?: number;
 }
 
 export interface ApiResponse<T> {

@@ -209,7 +209,9 @@ const NhanVienListPage = () => {
           <span className="text-gray-500 text-sm font-medium">
             Đang làm việc
           </span>
-          <span className="text-2xl font-bold text-[#16A34A]">-</span>
+          <span className="text-2xl font-bold text-[#16A34A]">
+            {apiResponse?.data?.soTaiKhoanHoatDong ?? 0}
+          </span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
           <span className="text-gray-500 text-sm font-medium">Nghỉ phép</span>
@@ -219,7 +221,9 @@ const NhanVienListPage = () => {
           <span className="text-gray-500 text-sm font-medium">
             Tài khoản bị khóa
           </span>
-          <span className="text-2xl font-bold text-[#DC2626]">-</span>
+          <span className="text-2xl font-bold text-[#DC2626]">
+            {apiResponse?.data?.soTaiKhoanBiKhoa ?? 0}
+          </span>
         </div>
       </div>
 

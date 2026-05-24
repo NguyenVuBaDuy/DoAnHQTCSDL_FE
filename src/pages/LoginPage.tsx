@@ -20,8 +20,15 @@ export default function LoginPage() {
     login(
       { manv: employeeId, password },
       {
-        onSuccess: () => {
-          navigate("/dashboard");
+        onSuccess: (data) => {
+          const role = data.data.user?.tennhom;
+          if (role === "NhanVienBan") {
+            navigate("/products");
+          } else if (role === "NhanVienKho") {
+            navigate("/inventory");
+          } else {
+            navigate("/dashboard");
+          }
         },
       },
     );

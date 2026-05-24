@@ -14,8 +14,22 @@ import { NhaCungCapPage } from './features/nha-cung-cap'
 import { VoucherPage } from './features/voucher'
 import { BaoCaoPage } from './features/bao-cao'
 import { CaiDatPage } from './features/cai-dat'
-import { useAppDispatch } from './store'
+import { useAppDispatch, useAppSelector } from './store'
 import { fetchCurrentUser } from './store/authSlice'
+
+const HomeRedirect = () => {
+  const { user } = useAppSelector((state) => state.auth)
+  if (!user) return <Navigate to="/login" replace />
+  
+  const role = user.tennhom
+  if (role === 'NhanVienBan') {
+    return <Navigate to="/products" replace />
+  }
+  if (role === 'NhanVienKho') {
+    return <Navigate to="/inventory" replace />
+  }
+  return <Navigate to="/dashboard" replace />
+}
 
 import { ProtectedRoute, PublicRoute, RoleProtectedRoute } from './components/auth'
 import NotFoundPage from './pages/NotFoundPage'
@@ -45,6 +59,7 @@ function App() {
           {/* Role protected routes with layout */}
           <Route element={<RoleProtectedRoute allowedRoles={['Admin', 'QuanLyCuaHang']} />}>
             <Route element={<MainLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/employees" element={<NhanVienListPage />} />
               <Route path="/reports" element={<BaoCaoPage />} />
             </Route>
@@ -72,14 +87,13 @@ function App() {
 
           {/* Standard protected routes with layout */}
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/inventory" element={<TonKhoPage />} />
             <Route path="/settings" element={<CaiDatPage />} />
           </Route>
         </Route>
 
         {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<HomeRedirect />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

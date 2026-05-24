@@ -58,7 +58,7 @@ const Sidebar = () => {
           .filter((item) => {
             if (!role) return false;
             if (item.to === "/dashboard") {
-              return role === "Admin" || role === "QuanLyCuaHang" || role === "NhanVienBan";
+              return role === "Admin" || role === "QuanLyCuaHang";
             }
             if (item.to === "/stores") {
               return role === "Admin";

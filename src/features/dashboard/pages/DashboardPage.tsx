@@ -98,8 +98,13 @@ const DashboardPage = () => {
     isRefetching: isOverviewRefetching,
     refetch: refetchOverview,
   } = useQuery({
-    queryKey: ["dashboard-overview", selectedStoreId],
-    queryFn: () => thongKeService.getTongQuan(selectedStoreId || undefined),
+    queryKey: ["dashboard-overview", selectedStoreId, startDate, endDate],
+    queryFn: () =>
+      thongKeService.getTongQuan({
+        maCh: selectedStoreId || undefined,
+        startDate: startDate ? `${startDate}T00:00:00Z` : undefined,
+        endDate: endDate ? `${endDate}T23:59:59Z` : undefined,
+      }),
   });
 
   // Stats Query 2: Top Selling Products
@@ -109,8 +114,14 @@ const DashboardPage = () => {
     isRefetching: isTopRefetching,
     refetch: refetchTop,
   } = useQuery({
-    queryKey: ["dashboard-top-products", selectedStoreId],
-    queryFn: () => thongKeService.getTopSanPham({ maCh: selectedStoreId || undefined, limit: 5 }),
+    queryKey: ["dashboard-top-products", selectedStoreId, startDate, endDate],
+    queryFn: () =>
+      thongKeService.getTopSanPham({
+        maCh: selectedStoreId || undefined,
+        limit: 5,
+        startDate: startDate ? `${startDate}T00:00:00Z` : undefined,
+        endDate: endDate ? `${endDate}T23:59:59Z` : undefined,
+      }),
   });
 
   // Stats Query 3: Category Revenue Share
@@ -120,8 +131,13 @@ const DashboardPage = () => {
     isRefetching: isCategoryRefetching,
     refetch: refetchCategory,
   } = useQuery({
-    queryKey: ["dashboard-category", selectedStoreId],
-    queryFn: () => thongKeService.getDoanhThuTheoDanhMuc(selectedStoreId || undefined),
+    queryKey: ["dashboard-category", selectedStoreId, startDate, endDate],
+    queryFn: () =>
+      thongKeService.getDoanhThuTheoDanhMuc({
+        maCh: selectedStoreId || undefined,
+        startDate: startDate ? `${startDate}T00:00:00Z` : undefined,
+        endDate: endDate ? `${endDate}T23:59:59Z` : undefined,
+      }),
   });
 
   // Stats Query 4: Revenue and Orders Over Time

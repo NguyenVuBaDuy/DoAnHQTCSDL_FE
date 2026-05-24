@@ -16,7 +16,7 @@ import {
 import { useAppSelector } from "../../store";
 
 const mainNavItems = [
-  { to: "/dashboard", label: "Tổng quan", icon: HiOutlineHome },
+  { to: "/dashboard", label: "Báo cáo", icon: HiOutlineChartBar },
   { to: "/stores", label: "Cửa hàng", icon: HiOutlineBuildingStorefront },
   { to: "/employees", label: "Nhân viên", icon: HiOutlineUsers },
   { to: "/products", label: "Sản phẩm", icon: HiOutlineCube },
@@ -25,7 +25,6 @@ const mainNavItems = [
   { to: "/customers", label: "Khách hàng", icon: HiOutlineUserGroup },
   { to: "/suppliers", label: "Nhà cung cấp", icon: HiOutlineBuildingOffice2 },
   { to: "/vouchers", label: "Voucher", icon: HiOutlineTicket },
-  { to: "/reports", label: "Báo cáo", icon: HiOutlineChartBar },
 ];
 
 const Sidebar = () => {
@@ -80,9 +79,6 @@ const Sidebar = () => {
             }
             if (item.to === "/vouchers") {
               return role === "Admin" || role === "QuanLyCuaHang" || role === "NhanVienBan";
-            }
-            if (item.to === "/reports") {
-              return role === "Admin" || role === "QuanLyCuaHang";
             }
             return true;
           })

@@ -9,18 +9,33 @@ import type {
 } from "../types/thong-ke";
 
 export const thongKeService = {
-  getTongQuan: async (maCh?: number): Promise<ApiResponse<TongQuanThongKeResponse>> => {
+  getTongQuan: async (params?: {
+    maCh?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<TongQuanThongKeResponse>> => {
     const { data } = await apiClient.get<ApiResponse<TongQuanThongKeResponse>>("/api/thong-ke/tong-quan", {
-      params: { maCh },
+      params: {
+        maCh: params?.maCh,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+      },
     });
     return data;
   },
 
-  getTopSanPham: async (params?: { maCh?: number; limit?: number }): Promise<ApiResponse<TopSanPhamResponse[]>> => {
+  getTopSanPham: async (params?: {
+    maCh?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<TopSanPhamResponse[]>> => {
     const { data } = await apiClient.get<ApiResponse<TopSanPhamResponse[]>>("/api/thong-ke/top-san-pham", {
       params: {
         maCh: params?.maCh,
         limit: params?.limit || 5,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
       },
     });
     return data;
@@ -43,9 +58,17 @@ export const thongKeService = {
     return data;
   },
 
-  getDoanhThuTheoDanhMuc: async (maCh?: number): Promise<ApiResponse<DoanhThuTheoDanhMucResponse[]>> => {
+  getDoanhThuTheoDanhMuc: async (params?: {
+    maCh?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<DoanhThuTheoDanhMucResponse[]>> => {
     const { data } = await apiClient.get<ApiResponse<DoanhThuTheoDanhMucResponse[]>>("/api/thong-ke/danh-muc", {
-      params: { maCh },
+      params: {
+        maCh: params?.maCh,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+      },
     });
     return data;
   },

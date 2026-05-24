@@ -12,7 +12,6 @@ import { HoaDonPage } from './features/hoa-don'
 import { KhachHangPage } from './features/khach-hang'
 import { NhaCungCapPage } from './features/nha-cung-cap'
 import { VoucherPage } from './features/voucher'
-import { BaoCaoPage } from './features/bao-cao'
 import { CaiDatPage } from './features/cai-dat'
 import { useAppDispatch, useAppSelector } from './store'
 import { fetchCurrentUser } from './store/authSlice'
@@ -61,7 +60,6 @@ function App() {
             <Route element={<MainLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/employees" element={<NhanVienListPage />} />
-              <Route path="/reports" element={<BaoCaoPage />} />
             </Route>
           </Route>
 

@@ -69,12 +69,13 @@ export const CreatePhieuNhapModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    const activeCuaHangs = cuaHangs.filter((ch) => ch.trangThai === "HoatDong");
     setFormData({
       maCh:
         !isAdmin && userStoreId
           ? userStoreId
-          : cuaHangs.length > 0
-            ? cuaHangs[0].maCh
+          : activeCuaHangs.length > 0
+            ? activeCuaHangs[0].maCh
             : 0,
       maNcc: nhaCungCaps.length > 0 ? nhaCungCaps[0].maNcc : undefined,
       ghiChu: "",
@@ -337,11 +338,13 @@ export const CreatePhieuNhapModal = ({
                   className="w-full px-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   <option value={0}>Chọn cửa hàng...</option>
-                  {cuaHangs.map((ch) => (
-                    <option key={ch.maCh} value={ch.maCh}>
-                      {ch.tenCh}
-                    </option>
-                  ))}
+                  {cuaHangs
+                    .filter((ch) => ch.trangThai === "HoatDong")
+                    .map((ch) => (
+                      <option key={ch.maCh} value={ch.maCh}>
+                        {ch.tenCh}
+                      </option>
+                    ))}
                 </select>
               ) : (
                 (() => {

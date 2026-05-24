@@ -96,20 +96,14 @@ const KhachHangPage = () => {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
+      <div className="flex gap-4">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2 w-72">
           <span className="text-gray-500 text-sm font-medium">
             Tổng khách hàng
           </span>
           <span className="text-2xl font-bold text-gray-900">
             {totalElements}
           </span>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
-          <span className="text-gray-500 text-sm font-medium">
-            Khách hàng mới (tháng này)
-          </span>
-          <span className="text-2xl font-bold text-[#16A34A]">-</span>
         </div>
       </div>
 
